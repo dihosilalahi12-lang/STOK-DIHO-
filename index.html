@@ -114,7 +114,7 @@ function tampilGambarProduk(url, nama){
   teks.hidden=true;
  }else{
   img.removeAttribute('src');img.hidden=true;teks.hidden=false;
-  teks.textContent='Gambar depan produk belum tersedia. Tidak semua UPC memiliki foto di database online.';
+  teks.textContent='Foto depan tidak tersedia untuk UPC ini di database online. Coba UPC lain atau tambahkan foto produk sendiri.';
  }
 }
 function isiForm(b){
@@ -150,19 +150,22 @@ function cariBarang(){
 function scanKePencarian(){document.getElementById('upc').focus();setStatus('Gunakan tombol Scan UPC dengan Kamera di bagian Tambah Barang untuk memindai UPC. Setelah terbaca, salin UPC ke kolom pencarian jika ingin mencari.')}
 async function cariGambarUPC(k, namaFallback=''){
  k=String(k||'').trim();
- if(!k){tampilGambarProduk('');return ''}
+ if(!k){tampilGambarProduk('');return null}
  try{
   const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(k)+'.json');
   if(!res.ok)throw new Error('request gagal');
   const data=await res.json(),p=data.status===1&&data.product;
-  const gambar=p&&(p.image_front_url||p.image_front_small_url||p.image_url)||'';
-  if(gambar)tampilGambarProduk(gambar,(p.product_name_id||p.product_name||p.product_name_en||namaFallback));
+  if(!p){tampilGambarProduk('',namaFallback);return null}
+  const candidates=[
+   p.image_front_url,p.image_front_small_url,p.image_front_thumb_url,
+   p.selected_images&&p.selected_images.front&&p.selected_images.front.display&&p.selected_images.front.display.en,
+   p.selected_images&&p.selected_images.front&&p.selected_images.front.display&&p.selected_images.front.display.id,
+   p.image_url,p.image_small_url
+  ].filter(Boolean);
+  if(candidates.length)tampilGambarProduk(candidates[0],p.product_name_id||p.product_name||p.product_name_en||namaFallback);
   else tampilGambarProduk('',namaFallback);
-  return p||null;
- }catch(e){
-  tampilGambarProduk('',namaFallback);
-  return null;
- }
+  return p;
+ }catch(e){tampilGambarProduk('',namaFallback);return null}
 }
 async function cariNamaProduk(){
  const k=document.getElementById('upc').value.trim();if(!k){setStatus('Isi atau scan UPC terlebih dahulu.');return}
@@ -178,7 +181,9 @@ async function cariNamaProduk(){
   if(!res.ok)throw new Error('request gagal');
   const data=await res.json(),p=data.status===1&&data.product;
   const name=p&&(p.product_name_id||p.product_name||p.product_name_en);
-  const gambar=p&&(p.image_front_url||p.image_front_small_url||p.image_url)||'';
+  const gambar=p&&(p.image_front_url||p.image_front_small_url||p.image_front_thumb_url||
+   (p.selected_images&&p.selected_images.front&&p.selected_images.front.display&&(p.selected_images.front.display.en||p.selected_images.front.display.id))||
+   p.image_url||p.image_small_url)||'';
   if(name)document.getElementById('nama').value=name;
   tampilGambarProduk(gambar,name||'');
   if(name||gambar){
@@ -254,4 +259,4 @@ function transaksi(){const b=barang.find(x=>x.id==document.getElementById('jual'
 tampil();
 </script>
 </body>
-</html>
+  </html>
