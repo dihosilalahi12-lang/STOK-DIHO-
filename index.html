@@ -1,137 +1,219 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DIHO Kasir</title>
-<style>
-body{font:16px Arial;background:#f1f6f2;margin:0;color:#17372b}
-header{background:#123e32;color:white;padding:20px}
-main{padding:15px;max-width:700px;margin:auto}
-section{background:white;padding:15px;margin:12px 0;border-radius:12px}
-input,select,button{box-sizing:border-box;width:100%;padding:12px;margin:5px 0;border-radius:7px;border:1px solid #ccc;font-size:16px}
-button{background:#145744;color:white;border:0;font-weight:bold}
-table{width:100%;text-align:left;border-collapse:collapse}
-td,th{padding:8px;border-bottom:1px solid #ddd}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#064e3b">
+  <meta name="description" content="DIHO Kasir dan Stok Barang — aplikasi kasir sederhana yang dapat digunakan offline.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
+  <title>DIHO • Kasir & Stok Barang</title>
+  <style>
+    :root{--green:#065f46;--dark:#064e3b;--bg:#eef5f1;--card:#fff;--text:#173b31;--muted:#64756e;--border:#d5e0da;--red:#b91c1c;--gold:#b45309}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    header{background:var(--dark);color:white;padding:24px 18px 20px;position:sticky;top:0;z-index:5;box-shadow:0 2px 10px #0002}
+    header h1{margin:0;font-size:30px;letter-spacing:.5px} header p{margin:5px 0 0;color:#d1fae5}
+    main{max-width:850px;margin:auto;padding:14px 12px 90px}
+    nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:850px;margin:0 auto;padding:8px 10px;background:#fff;border-bottom:1px solid var(--border)}
+    nav button{border:0;background:#edf4f0;color:var(--text);padding:10px 3px;border-radius:10px;font-weight:650;font-size:13px}
+    nav button.active{background:var(--green);color:#fff}
+    section.panel{display:none} section.panel.active{display:block}
+    .card{background:var(--card);border-radius:17px;padding:18px;margin:10px 0;box-shadow:0 2px 10px #103d2a0b}
+    h2{font-size:21px;margin:0 0 14px} h3{font-size:17px;margin:12px 0}
+    label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin:10px 0 5px}
+    input,select{width:100%;padding:13px 12px;border:1px solid #cbd5d0;border-radius:11px;background:#fff;color:#162e25;font:inherit;min-width:0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}
+    button{cursor:pointer} .btn{border:0;border-radius:11px;background:var(--green);color:#fff;padding:13px 14px;font:inherit;font-weight:700;width:100%;margin-top:10px}
+    .btn.secondary{background:#e4eee8;color:var(--text);border:1px solid var(--border)} .btn.danger{background:var(--red)} .btn.small{width:auto;padding:7px 10px;margin:0;font-size:13px}
+    .muted{color:var(--muted);font-size:13px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.row.wrap{flex-wrap:wrap}
+    .item{padding:12px 0;border-bottom:1px solid var(--border)}.item:last-child{border-bottom:0}
+    .price{font-weight:800}.pill{display:inline-block;border-radius:99px;padding:3px 8px;background:#e4eee8;font-size:12px}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:#f0f7f3;padding:13px;border-radius:12px}.stat strong{display:block;font-size:21px;margin-top:4px}
+    .empty{padding:18px;text-align:center;color:var(--muted)}
+    #cameraWrap{display:none;margin-top:10px} video{width:100%;max-height:300px;background:#111;border-radius:12px}
+    .notice{padding:10px 12px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:13px;margin:10px 0}
+    footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+    @media(min-width:600px){main{padding:20px} nav button{font-size:15px}.stats{grid-template-columns:repeat(4,1fr)}}
+  </style>
 </head>
 <body>
-<header><h1>DIHO</h1>KASIR • STOK BARANG</header>
+<header><h1>DIHO</h1><p>KASIR • STOK BARANG <span id="connection" class="pill">Memeriksa koneksi…</span></p></header>
+<nav aria-label="Menu utama">
+  <button class="active" data-tab="stok">📦 Stok</button>
+  <button data-tab="kasir">🛒 Kasir</button>
+  <button data-tab="laporan">📊 Laporan</button>
+  <button data-tab="pengaturan">⚙️ Lainnya</button>
+</nav>
 <main>
-<section>
-<h3>Tambah Barang</h3>
-<input id="nama" placeholder="Nama barang">
-<input id="kode" placeholder="Kode barcode">
-<input id="stok" type="number" min="0" placeholder="Stok awal">
-<input id="harga" type="number" min="0" placeholder="Harga jual">
-<button onclick="tambah()">Simpan Barang</button>
-</section>
+  <section id="stok" class="panel active">
+    <div class="card">
+      <h2 id="formTitle">Tambah Barang</h2>
+      <form id="productForm">
+        <input type="hidden" id="editId">
+        <label for="name">Nama barang</label><input id="name" required maxlength="100" placeholder="Contoh: Indomie Goreng">
+        <div class="grid">
+          <div><label for="barcode">Kode barcode</label><input id="barcode" placeholder="Ketik kode barcode"></div>
+          <div><label for="stock">Stok awal</label><input id="stock" type="number" min="0" step="1" required placeholder="0"></div>
+          <div class="full"><label for="price">Harga jual (Rp)</label><input id="price" type="number" min="0" step="1" required placeholder="3500"></div>
+        </div>
+        <button class="btn" type="submit">Simpan Barang</button>
+        <button class="btn secondary" type="button" id="cancelEdit" hidden>Batal mengedit</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Daftar Barang</h2>
+      <label for="stockSearch">Cari nama / barcode</label><input id="stockSearch" placeholder="Cari barang…">
+      <div id="productList"></div>
+    </div>
+  </section>
 
-<section>
-<h3>Cari Barcode</h3>
-<input id="cari" placeholder="Ketik atau scan kode barcode">
-<button onclick="cariBarang()">Cari Barang</button>
-<p id="hasil"></p>
-<button onclick="kamera()">Buka Kamera</button>
-<video id="video" hidden playsinline style="width:100%"></video>
-</section>
+  <section id="kasir" class="panel">
+    <div class="card">
+      <h2>Cari / Scan Barang</h2>
+      <label for="scanInput">Kode barcode atau nama barang</label>
+      <input id="scanInput" placeholder="Scan barcode dengan scanner atau ketik">
+      <div class="grid">
+        <button class="btn" id="addByCode" type="button">Tambah ke Keranjang</button>
+        <button class="btn secondary" id="startCamera" type="button">📷 Scan Kamera</button>
+      </div>
+      <div id="cameraWrap"><video id="video" playsinline></video><button class="btn danger" id="stopCamera" type="button">Tutup Kamera</button><p class="muted">Izinkan akses kamera jika diminta. Fitur ini memerlukan browser yang mendukung pemindaian barcode.</p></div>
+      <div id="matchList"></div>
+    </div>
+    <div class="card">
+      <h2>Keranjang</h2><div id="cartList"></div>
+      <div class="row" style="margin-top:12px"><strong>Total</strong><strong id="cartTotal">Rp0</strong></div>
+      <label for="paid">Uang diterima (Rp)</label><input id="paid" type="number" min="0" step="1" placeholder="Masukkan pembayaran">
+      <div class="row" style="margin-top:8px"><span>Kembalian</span><strong id="change">Rp0</strong></div>
+      <button class="btn" id="checkout" type="button">Selesaikan Penjualan</button>
+      <button class="btn secondary" id="clearCart" type="button">Kosongkan Keranjang</button>
+    </div>
+  </section>
 
-<section>
-<h3>Daftar Stok</h3>
-<input id="filter" placeholder="Cari nama barang" oninput="tampil()">
-<table>
-<thead><tr><th>Barang</th><th>Stok</th><th>Harga</th><th>Aksi</th></tr></thead>
-<tbody id="daftar"></tbody>
-</table>
-<p id="jumlah"></p>
-</section>
+  <section id="laporan" class="panel">
+    <div class="card">
+      <h2>Laporan Penjualan</h2>
+      <div class="stats">
+        <div class="stat"><span class="muted">Total transaksi</span><strong id="statCount">0</strong></div>
+        <div class="stat"><span class="muted">Omzet</span><strong id="statRevenue">Rp0</strong></div>
+        <div class="stat"><span class="muted">Modal terjual*</span><strong id="statCost">—</strong></div>
+        <div class="stat"><span class="muted">Stok barang</span><strong id="statStock">0</strong></div>
+      </div>
+      <p class="muted">*Keuntungan belum dihitung karena versi ini hanya menyimpan harga jual, bukan harga modal. Jangan menganggap omzet sebagai keuntungan.</p>
+      <button class="btn secondary" id="exportCsv" type="button">Unduh laporan CSV</button>
+      <div id="salesList"></div>
+    </div>
+  </section>
 
-<section>
-<h3>Stok Masuk / Keluar</h3>
-<select id="pilih"></select>
-<input id="jumlahUbah" type="number" min="1" value="1">
-<button onclick="ubah(1)">Barang Masuk</button>
-<button onclick="ubah(-1)">Barang Keluar</button>
-</section>
-
-<section>
-<h3>Kasir</h3>
-<select id="jual"></select>
-<input id="jumlahJual" type="number" min="1" value="1">
-<button onclick="transaksi()">Jual Barang</button>
-<p id="nota"></p>
-</section>
+  <section id="pengaturan" class="panel">
+    <div class="card">
+      <h2>Data & Aplikasi</h2>
+      <p class="muted">Data disimpan di penyimpanan browser pada perangkat ini. Data tidak otomatis tersinkron ke HP lain.</p>
+      <button class="btn secondary" id="exportBackup" type="button">Ekspor cadangan data (JSON)</button>
+      <label for="importFile">Pulihkan cadangan JSON</label><input id="importFile" type="file" accept=".json,application/json">
+      <div class="notice">Penting: bersihkan data browser atau menghapus data aplikasi dapat menghapus data lokal. Ekspor cadangan secara berkala.</div>
+      <button class="btn danger" id="resetData" type="button">Hapus semua data lokal</button>
+      <p id="appVersion" class="muted">DIHO PWA • versi 1.0</p>
+    </div>
+  </section>
+  <footer>DIHO Kasir • Data tersimpan lokal di perangkat</footer>
 </main>
-
 <script>
-let barang=[];
-try{barang=JSON.parse(localStorage.getItem('diho_barang')||'[]')}catch(e){}
-function simpan(){localStorage.setItem('diho_barang',JSON.stringify(barang))}
-function rupiah(n){return 'Rp '+Number(n).toLocaleString('id-ID')}
-function tambah(){
-let n=document.getElementById('nama').value.trim();
-let k=document.getElementById('kode').value.trim();
-let s=Number(document.getElementById('stok').value);
-let h=Number(document.getElementById('harga').value);
-if(!n)return alert('Isi nama barang');
-if(barang.some(b=>b.kode===k&&k))return alert('Kode sudah terdaftar');
-barang.push({id:Date.now(),nama:n,kode:k,stok:s,harga:h});
-simpan();tampil();alert('Barang tersimpan');
-document.getElementById('nama').value='';
-document.getElementById('kode').value='';
-document.getElementById('stok').value='';
-document.getElementById('harga').value='';
-}
-function tampil(){
-let q=document.getElementById('filter').value.toLowerCase();
-let list=barang.filter(b=>(b.nama+' '+b.kode).toLowerCase().includes(q));
-document.getElementById('daftar').innerHTML=list.map(b=>
-'<tr><td>'+aman(b.nama)+'<br><small>'+aman(b.kode)+'</small></td><td>'+b.stok+'</td><td>'+rupiah(b.harga)+'</td><td><button onclick="hapus('+b.id+')">Hapus</button></td></tr>'
-).join('');
-document.getElementById('jumlah').textContent='Jenis barang: '+barang.length+' | Total stok: '+barang.reduce((a,b)=>a+b.stok,0);
-['pilih','jual'].forEach(id=>document.getElementById(id).innerHTML=barang.map(b=>'<option value="'+b.id+'">'+aman(b.nama)+'</option>').join(''));
-}
-function aman(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function hapus(id){if(confirm('Hapus barang?')){barang=barang.filter(b=>b.id!==id);simpan();tampil()}}
-function cariBarang(){
-let k=document.getElementById('cari').value.trim();
-let b=barang.find(x=>x.kode===k);
-document.getElementById('hasil').textContent=b?b.nama+' | Stok '+b.stok+' | '+rupiah(b.harga):'Kode tidak ditemukan';
-}
-function ubah(t){
-let b=barang.find(x=>x.id==document.getElementById('pilih').value);
-let n=Number(document.getElementById('jumlahUbah').value);
-if(!b||n<1)return;
-if(t<0&&b.stok<n)return alert('Stok tidak cukup');
-b.stok+=t*n;simpan();tampil();alert('Stok diperbarui');
-}
-function transaksi(){
-let b=barang.find(x=>x.id==document.getElementById('jual').value);
-let n=Number(document.getElementById('jumlahJual').value);
-if(!b||n<1)return;
-if(b.stok<n)return alert('Stok tidak cukup');
-b.stok-=n;simpan();tampil();
-document.getElementById('nota').textContent='Total '+rupiah(n*b.harga);
-}
-let stream=null;
-async function kamera(){
-if(!window.BarcodeDetector)return alert('Browser belum mendukung pemindai barcode. Gunakan Chrome terbaru atau ketik kode secara manual.');
-try{
-let det=new BarcodeDetector();
-stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-let v=document.getElementById('video');v.hidden=false;v.srcObject=stream;await v.play();
-async function scan(){
-if(!stream)return;
-try{let r=await det.detect(v);if(r.length){
-document.getElementById('cari').value=r[0].rawValue;cariBarang();
-stream.getTracks().forEach(t=>t.stop());stream=null;v.hidden=true;return;
-}}catch(e){}
-if(stream)requestAnimationFrame(scan);
-}
-scan();
-}catch(e){alert('Kamera gagal dibuka. Pastikan izin kamera aktif dan halaman menggunakan HTTPS.')}
-}
-tampil();
+(() => {
+  'use strict';
+  const KEY='diho-pwa-data-v1';
+  const $=id=>document.getElementById(id);
+  const rupiah=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(n)||0);
+  const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  let data={products:[],sales:[]},cart=[],cameraStream=null,scanLoop=false;
+  try { const saved=JSON.parse(localStorage.getItem(KEY)||'null'); if(saved&&Array.isArray(saved.products)&&Array.isArray(saved.sales)) data=saved; } catch(e) {}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){alert('Penyimpanan penuh atau tidak tersedia. Ekspor cadangan dan kosongkan ruang.');}}
+  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+  function showTab(id){document.querySelectorAll('section.panel').forEach(s=>s.classList.toggle('active',s.id===id));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));if(id==='laporan')renderReports();if(id==='kasir')renderCart();}
+  document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+  function renderProducts(){
+    const q=$('stockSearch').value.trim().toLowerCase();
+    const list=data.products.filter(p=>p.name.toLowerCase().includes(q)||(p.barcode||'').toLowerCase().includes(q));
+    $('productList').innerHTML=list.length?list.map(p=>`<div class="item"><div class="row"><div><strong>${esc(p.name)}</strong><div class="muted">Barcode: ${esc(p.barcode||'-')} · Stok: <b>${p.stock}</b></div><div class="price">${rupiah(p.price)}</div></div><div style="display:flex;gap:5px;flex-direction:column"><button class="btn small secondary" data-edit="${p.id}">Edit</button><button class="btn small danger" data-delete="${p.id}">Hapus</button></div></div></div>`).join(''):'<div class="empty">Belum ada barang. Tambahkan barang melalui formulir di atas.</div>';
+    $('statStock').textContent=data.products.reduce((a,p)=>a+Number(p.stock),0);
+  }
+  $('productForm').addEventListener('submit',e=>{
+    e.preventDefault();const id=$('editId').value,name=$('name').value.trim(),barcode=$('barcode').value.trim(),stock=Number($('stock').value),price=Number($('price').value);
+    if(!name||!Number.isFinite(stock)||stock<0||!Number.isFinite(price)||price<0)return alert('Periksa nama, stok, dan harga.');
+    const duplicate=barcode&&data.products.some(p=>p.barcode===barcode&&p.id!==id);if(duplicate)return alert('Kode barcode sudah digunakan barang lain.');
+    if(id){const p=data.products.find(x=>x.id===id);if(p)Object.assign(p,{name,barcode,stock,price});}
+    else data.products.push({id:uid(),name,barcode,stock,price});
+    save();$('productForm').reset();$('editId').value='';$('formTitle').textContent='Tambah Barang';$('cancelEdit').hidden=true;renderProducts();alert('Barang berhasil disimpan.');
+  });
+  $('cancelEdit').addEventListener('click',()=>{$('productForm').reset();$('editId').value='';$('formTitle').textContent='Tambah Barang';$('cancelEdit').hidden=true;});
+  $('stockSearch').addEventListener('input',renderProducts);
+  $('productList').addEventListener('click',e=>{
+    const edit=e.target.dataset.edit,del=e.target.dataset.delete;
+    if(edit){const p=data.products.find(x=>x.id===edit);if(!p)return;$('editId').value=p.id;$('name').value=p.name;$('barcode').value=p.barcode||'';$('stock').value=p.stock;$('price').value=p.price;$('formTitle').textContent='Edit Barang';$('cancelEdit').hidden=false;window.scrollTo({top:0,behavior:'smooth'});}
+    if(del){const p=data.products.find(x=>x.id===del);if(p&&confirm(`Hapus barang "${p.name}"?`)){data.products=data.products.filter(x=>x.id!==del);cart=cart.filter(x=>x.productId!==del);save();renderProducts();renderCart();}}
+  });
+  function addProduct(p){
+    if(!p)return alert('Barang tidak ditemukan.');
+    const existing=cart.find(x=>x.productId===p.id);
+    if((existing?existing.qty:0)>=p.stock)return alert('Stok tidak mencukupi.');
+    if(existing)existing.qty++;else cart.push({productId:p.id,name:p.name,price:p.price,qty:1});
+    $('scanInput').value='';$('matchList').innerHTML='';renderCart();
+  }
+  $('addByCode').addEventListener('click',()=>{
+    const q=$('scanInput').value.trim().toLowerCase();if(!q)return alert('Masukkan atau scan barcode terlebih dahulu.');
+    const exact=data.products.find(p=>(p.barcode||'').toLowerCase()===q);
+    if(exact)return addProduct(exact);
+    const matches=data.products.filter(p=>p.name.toLowerCase().includes(q)||(p.barcode||'').toLowerCase().includes(q));
+    if(matches.length===1)return addProduct(matches[0]);
+    $('matchList').innerHTML=matches.length?matches.map(p=>`<div class="item row"><div><strong>${esc(p.name)}</strong><div class="muted">Stok ${p.stock} · ${rupiah(p.price)}</div></div><button class="btn small" data-pick="${p.id}">Pilih</button></div>`).join(''):'<div class="empty">Barang tidak ditemukan.</div>';
+  });
+  $('matchList').addEventListener('click',e=>{const id=e.target.dataset.pick;if(id)addProduct(data.products.find(p=>p.id===id));});
+  function total(){return cart.reduce((s,x)=>s+x.price*x.qty,0);}
+  function renderCart(){
+    $('cartList').innerHTML=cart.length?cart.map(x=>`<div class="item"><div class="row"><div><strong>${esc(x.name)}</strong><div class="muted">${rupiah(x.price)} × ${x.qty}</div></div><strong>${rupiah(x.price*x.qty)}</strong></div><div class="row" style="margin-top:8px"><button class="btn small secondary" data-minus="${x.productId}">−</button><span>${x.qty}</span><button class="btn small secondary" data-plus="${x.productId}">+</button><button class="btn small danger" data-remove="${x.productId}">Hapus</button></div></div>`).join(''):'<div class="empty">Keranjang masih kosong.</div>';
+    $('cartTotal').textContent=rupiah(total());updateChange();
+  }
+  function updateChange(){const paid=Number($('paid').value)||0;$('change').textContent=rupiah(Math.max(0,paid-total()));}
+  $('paid').addEventListener('input',updateChange);
+  $('cartList').addEventListener('click',e=>{
+    const id=e.target.dataset.plus||e.target.dataset.minus||e.target.dataset.remove;if(!id)return;
+    const item=cart.find(x=>x.productId===id),p=data.products.find(x=>x.id===id);if(!item)return;
+    if(e.target.dataset.plus!==undefined){if(p&&item.qty<p.stock)item.qty++;else alert('Stok tidak mencukupi.');}
+    if(e.target.dataset.minus!==undefined){item.qty--;if(item.qty<=0)cart=cart.filter(x=>x.productId!==id);}
+    if(e.target.dataset.remove!==undefined)cart=cart.filter(x=>x.productId!==id);
+    renderCart();
+  });
+  $('clearCart').addEventListener('click',()=>{if(cart.length&&confirm('Kosongkan keranjang?')){cart=[];renderCart();}});
+  $('checkout').addEventListener('click',()=>{
+    if(!cart.length)return alert('Keranjang masih kosong.');
+    for(const x of cart){const p=data.products.find(p=>p.id===x.productId);if(!p||p.stock<x.qty)return alert(`Stok ${x.name} tidak mencukupi. Periksa kembali keranjang.`);}
+    const amount=total(),paid=Number($('paid').value)||0;if(paid<amount)return alert('Uang diterima belum cukup untuk membayar total.');
+    const sale={id:uid(),date:new Date().toISOString(),items:cart.map(x=>({...x})),total:amount,paid,change:paid-amount};
+    sale.items.forEach(x=>{const p=data.products.find(p=>p.id===x.productId);p.stock-=x.qty;});
+    data.sales.unshift(sale);save();cart=[];$('paid').value='';renderCart();renderProducts();alert(`Transaksi berhasil!\nTotal: ${rupiah(amount)}\nKembalian: ${rupiah(sale.change)}`);showTab('laporan');
+  });
+  function renderReports(){
+    const revenue=data.sales.reduce((s,x)=>s+x.total,0);$('statCount').textContent=data.sales.length;$('statRevenue').textContent=rupiah(revenue);$('statCost').textContent='Belum ada data modal';$('statStock').textContent=data.products.reduce((a,p)=>a+Number(p.stock),0);
+    $('salesList').innerHTML=data.sales.length?'<h3>Transaksi terbaru</h3>'+data.sales.slice(0,50).map(s=>`<div class="item"><div class="row"><strong>${new Date(s.date).toLocaleString('id-ID')}</strong><strong>${rupiah(s.total)}</strong></div><div class="muted">${s.items.map(x=>`${esc(x.name)} × ${x.qty}`).join(', ')}</div><button class="btn small secondary" data-receipt="${s.id}">Lihat struk</button></div>`).join(''):'<div class="empty">Belum ada transaksi.</div>';
+  }
+  $('salesList').addEventListener('click',e=>{const id=e.target.dataset.receipt;if(!id)return;const s=data.sales.find(x=>x.id===id);if(s)alert(`DIHO — STRUK\n${new Date(s.date).toLocaleString('id-ID')}\n\n${s.items.map(x=>`${x.name} x${x.qty}  ${rupiah(x.price*x.qty)}`).join('\n')}\n\nTotal: ${rupiah(s.total)}\nBayar: ${rupiah(s.paid)}\nKembali: ${rupiah(s.change)}`);});
+  function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  $('exportCsv').addEventListener('click',()=>{const rows=[['Tanggal','ID Transaksi','Nama Barang','Barcode','Qty','Harga','Subtotal','Total Transaksi']];data.sales.forEach(s=>s.items.forEach(i=>{const p=data.products.find(p=>p.id===i.productId);rows.push([new Date(s.date).toLocaleString('id-ID'),s.id,i.name,p?.barcode||'',i.qty,i.price,i.qty*i.price,s.total]);}));const csv='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');download('laporan-diho.csv',csv,'text/csv;charset=utf-8;');});
+  $('exportBackup').addEventListener('click',()=>download('cadangan-diho.json',JSON.stringify(data,null,2),'application/json'));
+  $('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.products)||!Array.isArray(d.sales))throw Error();if(confirm('Pulihkan cadangan? Data yang sekarang akan diganti.')){data=d;save();renderProducts();renderCart();renderReports();alert('Cadangan berhasil dipulihkan.');}}catch(err){alert('File cadangan tidak valid.');}e.target.value='';});
+  $('resetData').addEventListener('click',()=>{if(confirm('Yakin hapus SEMUA barang dan transaksi dari perangkat ini? Ekspor cadangan dahulu.')){data={products:[],sales:[]};cart=[];save();renderProducts();renderCart();renderReports();alert('Data lokal dihapus.');}});
+  async function startCamera(){
+    if(!('BarcodeDetector' in window)){alert('Browser ini belum mendukung deteksi barcode kamera. Gunakan scanner barcode Bluetooth/USB atau ketik kodenya.');return;}
+    try{const detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});$('video').srcObject=cameraStream;$('cameraWrap').style.display='block';await $('video').play();scanLoop=true;
+      const loop=async()=>{if(!scanLoop)return;try{const codes=await detector.detect($('video'));if(codes.length){$('scanInput').value=codes[0].rawValue;stopCamera();$('addByCode').click();return;}}catch(e){}if(scanLoop)requestAnimationFrame(loop);};loop();
+    }catch(e){alert('Kamera tidak dapat dibuka. Pastikan izin kamera diizinkan dan website dibuka melalui HTTPS.');}
+  }
+  function stopCamera(){scanLoop=false;if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}$('video').srcObject=null;$('cameraWrap').style.display='none';}
+  $('startCamera').addEventListener('click',startCamera);$('stopCamera').addEventListener('click',stopCamera);window.addEventListener('pagehide',stopCamera);
+  function connection(){ $('connection').textContent=navigator.onLine?'Online':'Offline';}
+  window.addEventListener('online',connection);window.addEventListener('offline',connection);
+  if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'))navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW gagal didaftarkan',e));
+  connection();renderProducts();renderCart();renderReports();
+})();
 </script>
 </body>
 </html>
