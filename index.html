@@ -17,7 +17,7 @@ button{background:#145744;color:white;border:0;font-weight:bold;cursor:pointer}
 button.secondary{background:#e6efea;color:#123e32;border:1px solid #c5d7cd}
 button.danger{background:#a52d2d}
 .small{font-size:13px;color:#52675d;line-height:1.45}
-.status{padding:10px;border-radius:8px;background:#eef5f0;overflow-wrap:anywhere}
+.status{padding:10px;border-radius:8px;background:#eef5f0;overflow-wrap:anywhere;line-height:1.4}
 video{width:100%;border-radius:10px;background:#111;margin-top:8px}
 table{width:100%;text-align:left;border-collapse:collapse}
 td,th{padding:8px;border-bottom:1px solid #ddd;vertical-align:top}
@@ -33,38 +33,44 @@ td button{padding:8px;font-size:13px}
 <h3>Tambah Barang</h3>
 <label for="nama">Nama barang</label>
 <input id="nama" placeholder="Nama barang">
-<label for="kode">Kode UPC / barcode</label>
-<input id="kode" placeholder="Kode UPC / EAN" inputmode="numeric">
+<label for="upc">UPC / barcode pabrik</label>
+<input id="upc" placeholder="Contoh UPC: 0000089" inputmode="numeric">
 <div class="actions">
-<button type="button" onclick="fotoBarcode()">📷 Foto / Pilih Foto Barcode</button>
-<button type="button" onclick="kamera()">▣ Scan dengan Kamera</button>
+<button type="button" onclick="fotoBarcode()">📷 Foto / Pilih Foto UPC</button>
+<button type="button" onclick="kamera()">▣ Scan UPC dengan Kamera</button>
 </div>
 <input id="foto" type="file" accept="image/*" capture="environment" hidden>
 <video id="video" hidden playsinline></video>
 <button id="stopCamera" class="secondary" type="button" onclick="stopKamera()" hidden>Hentikan kamera</button>
-<button type="button" class="secondary" onclick="cariNamaProduk()">Cari Nama dari Barcode</button>
-<p id="statusProduk" class="status" aria-live="polite">Foto/scan barcode untuk membaca kodenya, lalu DIHO akan mencoba mencari nama produk di basis data online.</p>
+<label for="kode">Barcode internal / kode kasir</label>
+<input id="kode" placeholder="Contoh kode sendiri: 473">
+<p class="small">UPC adalah kode dari pabrik/kemasan. Barcode internal adalah kode pendek buatan toko, misalnya 473. Keduanya bisa digunakan untuk mencari barang.</p>
+<button type="button" class="secondary" onclick="cariNamaProduk()">Cari Nama dari UPC</button>
+<p id="statusProduk" class="status" aria-live="polite">Scan UPC untuk membaca kode pabrik. Kamu juga bisa memasukkan kode internal sendiri, misalnya 473.</p>
 <label for="stok">Stok awal</label>
 <input id="stok" type="number" min="0" step="1" placeholder="Stok awal">
 <label for="harga">Harga jual (Rp)</label>
 <input id="harga" type="number" min="0" step="1" placeholder="Harga jual">
 <button type="button" onclick="tambah()">Simpan Barang</button>
-<p class="small">Catatan: nama produk online tidak selalu tersedia untuk semua barcode. Jika tidak ditemukan, isi nama barang secara manual. Produk yang berhasil disimpan akan dikenali oleh DIHO pada pemakaian berikutnya.</p>
+<p class="small">Nama produk dicari melalui Open Food Facts jika tersedia. Jika tidak ditemukan, isi nama barang manual. Data barang disimpan di perangkat ini.</p>
 </section>
 
 <section>
-<h3>Cari Barcode</h3>
-<input id="cari" placeholder="Ketik atau scan kode barcode" inputmode="numeric">
-<button type="button" onclick="cariBarang()">Cari di Stok DIHO</button>
+<h3>Cari Barang</h3>
+<input id="cari" placeholder="Ketik / scan UPC atau kode internal" inputmode="numeric">
+<div class="actions">
+<button type="button" onclick="cariBarang()">Cari UPC / Barcode</button>
+<button type="button" class="secondary" onclick="pakaiKodeUntukCari()">Gunakan UPC hasil scan</button>
+</div>
 <p id="hasil" aria-live="polite"></p>
 </section>
 
 <section>
 <h3>Daftar Stok</h3>
-<input id="filter" placeholder="Cari nama barang atau barcode" oninput="tampil()">
+<input id="filter" placeholder="Cari nama, UPC, atau barcode internal" oninput="tampil()">
 <div style="overflow-x:auto">
 <table>
-<thead><tr><th>Barang / Barcode</th><th>Stok</th><th>Harga</th><th>Aksi</th></tr></thead>
+<thead><tr><th>Barang / Kode</th><th>Stok</th><th>Harga</th><th>Aksi</th></tr></thead>
 <tbody id="daftar"></tbody>
 </table>
 </div>
@@ -92,148 +98,156 @@ td button{padding:8px;font-size:13px}
 
 <script>
 let barang=[];
-try { barang=JSON.parse(localStorage.getItem('diho_barang')||'[]'); if(!Array.isArray(barang)) barang=[]; } catch(e) { barang=[]; }
-let stream=null;
-let scanAktif=false;
+try {
+  const saved=JSON.parse(localStorage.getItem('diho_barang')||'[]');
+  if(Array.isArray(saved)){
+    // Kompatibilitas: kode lama dipindahkan menjadi UPC agar data lama tetap bisa dicari.
+    barang=saved.map(b=>{
+      if(!b.upc && b.kode){return {...b,upc:String(b.kode),kode:''};}
+      return {...b,upc:String(b.upc||''),kode:String(b.kode||'')};
+    });
+    localStorage.setItem('diho_barang',JSON.stringify(barang));
+  }
+} catch(e){barang=[];}
+let stream=null, scanAktif=false;
 
 function simpan(){
-  try { localStorage.setItem('diho_barang',JSON.stringify(barang)); }
-  catch(e){ alert('Penyimpanan penuh atau diblokir. Catat/cadangkan data barang terlebih dahulu.'); }
+  try{localStorage.setItem('diho_barang',JSON.stringify(barang));}
+  catch(e){alert('Penyimpanan gagal. Pastikan ruang penyimpanan tersedia.');}
 }
 function rupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
 function aman(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function setStatus(msg){document.getElementById('statusProduk').textContent=msg}
-function cariLokal(k){return barang.find(x=>String(x.kode||'').trim()===String(k||'').trim() && k)}
+function cariKode(k){
+  k=String(k||'').trim();
+  if(!k)return null;
+  return barang.find(b=>String(b.upc||'').trim()===k || String(b.kode||'').trim()===k);
+}
 function tambah(){
-  let n=document.getElementById('nama').value.trim();
-  let k=document.getElementById('kode').value.trim();
-  let stokVal=document.getElementById('stok').value;
-  let hargaVal=document.getElementById('harga').value;
-  let s=Number(stokVal), h=Number(hargaVal);
+  const n=document.getElementById('nama').value.trim();
+  const upc=document.getElementById('upc').value.trim();
+  const kode=document.getElementById('kode').value.trim();
+  const sv=document.getElementById('stok').value, hv=document.getElementById('harga').value;
+  const s=Number(sv), h=Number(hv);
   if(!n)return alert('Isi nama barang');
+  if(!upc&&!kode)return alert('Isi UPC atau barcode internal');
   if(!Number.isFinite(s)||s<0||!Number.isInteger(s))return alert('Stok awal harus angka bulat 0 atau lebih');
   if(!Number.isFinite(h)||h<0)return alert('Harga jual harus 0 atau lebih');
-  if(barang.some(b=>String(b.kode||'')===k&&k))return alert('Kode sudah terdaftar');
-  barang.push({id:Date.now(),nama:n,kode:k,stok:s,harga:h});
-  simpan();tampil();alert('Barang tersimpan di perangkat ini');
-  document.getElementById('nama').value='';
-  document.getElementById('kode').value='';
-  document.getElementById('stok').value='';
-  document.getElementById('harga').value='';
-  setStatus('Barang tersimpan. Kamu bisa scan barcode berikutnya.');
+  if(barang.some(b=>(upc&&(String(b.upc||'')===upc||String(b.kode||'')===upc))||(kode&&(String(b.kode||'')===kode||String(b.upc||'')===kode))))return alert('UPC atau barcode internal sudah digunakan barang lain');
+  barang.push({id:Date.now(),nama:n,upc,kode,stok:s,harga:h});
+  simpan();tampil();alert('Barang tersimpan');
+  ['nama','upc','kode','stok','harga'].forEach(id=>document.getElementById(id).value='');
+  setStatus('Barang tersimpan. UPC dan barcode internal dapat dipakai untuk pencarian.');
 }
 function tampil(){
-  let q=document.getElementById('filter').value.toLowerCase();
-  let list=barang.filter(b=>(b.nama+' '+(b.kode||'')).toLowerCase().includes(q));
+  const q=document.getElementById('filter').value.toLowerCase();
+  const list=barang.filter(b=>(b.nama+' '+(b.upc||'')+' '+(b.kode||'')).toLowerCase().includes(q));
   document.getElementById('daftar').innerHTML=list.map(b=>
-    '<tr><td>'+aman(b.nama)+'<br><small>'+aman(b.kode||'Tanpa barcode')+'</small></td><td>'+Number(b.stok||0)+'</td><td>'+rupiah(b.harga)+'</td><td><button class="danger" onclick="hapus('+Number(b.id)+')">Hapus</button></td></tr>'
+    '<tr><td>'+aman(b.nama)+'<br><small>UPC: '+aman(b.upc||'—')+'<br>Barcode: '+aman(b.kode||'—')+'</small></td><td>'+Number(b.stok||0)+'</td><td>'+rupiah(b.harga)+'</td><td><button class="danger" onclick="hapus('+Number(b.id)+')">Hapus</button></td></tr>'
   ).join('');
   document.getElementById('jumlah').textContent='Jenis barang: '+barang.length+' | Total stok: '+barang.reduce((a,b)=>a+Number(b.stok||0),0);
   ['pilih','jual'].forEach(id=>{
-    let el=document.getElementById(id), old=el.value;
+    const el=document.getElementById(id), old=el.value;
     el.innerHTML=barang.map(b=>'<option value="'+Number(b.id)+'">'+aman(b.nama)+' — stok '+Number(b.stok||0)+'</option>').join('');
     if(barang.some(b=>String(b.id)===old))el.value=old;
   });
 }
 function hapus(id){if(confirm('Hapus barang ini?')){barang=barang.filter(b=>b.id!==id);simpan();tampil()}}
 function cariBarang(){
-  let k=document.getElementById('cari').value.trim();
-  let b=cariLokal(k);
-  document.getElementById('hasil').textContent=b?b.nama+' | Barcode '+b.kode+' | Stok '+b.stok+' | '+rupiah(b.harga):'Kode belum terdaftar di stok DIHO. Kamu bisa memasukkannya di bagian Tambah Barang.';
-  if(!b && k){document.getElementById('kode').value=k;cariNamaProduk();}
+  const k=document.getElementById('cari').value.trim();
+  const b=cariKode(k);
+  const hasil=document.getElementById('hasil');
+  if(b){
+    hasil.textContent='Ditemukan: '+b.nama+' | UPC: '+(b.upc||'—')+' | Barcode internal: '+(b.kode||'—')+' | Stok '+b.stok+' | '+rupiah(b.harga);
+    document.getElementById('nama').value=b.nama;
+    document.getElementById('upc').value=b.upc||'';
+    document.getElementById('kode').value=b.kode||'';
+  }else{
+    hasil.textContent='Kode belum ada di stok DIHO. Jika yang dimasukkan UPC pabrik, gunakan Cari Nama dari UPC.';
+    if(k)document.getElementById('upc').value=k;
+  }
 }
-function ubah(t){
-  let b=barang.find(x=>x.id==document.getElementById('pilih').value);
-  let n=Number(document.getElementById('jumlahUbah').value);
-  if(!b||!Number.isInteger(n)||n<1)return alert('Pilih barang dan isi jumlah bulat minimal 1');
-  if(t<0&&b.stok<n)return alert('Stok tidak cukup');
-  b.stok+=t*n;simpan();tampil();alert('Stok diperbarui');
-}
-function transaksi(){
-  let b=barang.find(x=>x.id==document.getElementById('jual').value);
-  let n=Number(document.getElementById('jumlahJual').value);
-  if(!b||!Number.isInteger(n)||n<1)return alert('Pilih barang dan isi jumlah bulat minimal 1');
-  if(b.stok<n)return alert('Stok tidak cukup');
-  b.stok-=n;simpan();tampil();
-  document.getElementById('nota').textContent='Barang: '+b.nama+' | Jumlah: '+n+' | Total '+rupiah(n*b.harga);
+function pakaiKodeUntukCari(){
+  const k=document.getElementById('upc').value.trim();
+  if(!k)return alert('Scan atau isi UPC terlebih dahulu');
+  document.getElementById('cari').value=k;
+  cariBarang();
 }
 function fotoBarcode(){document.getElementById('foto').click()}
 document.getElementById('foto').addEventListener('change',async function(){
-  const file=this.files&&this.files[0]; if(!file)return;
-  if(!('BarcodeDetector' in window)){setStatus('Browser ini belum mendukung pembacaan barcode dari foto. Coba Chrome terbaru dan gunakan tombol Scan dengan Kamera, atau ketik kode manual.');this.value='';return}
+  const file=this.files&&this.files[0];if(!file)return;
+  if(!('BarcodeDetector' in window)){setStatus('Browser belum mendukung scan dari foto. Coba Chrome terbaru atau gunakan Scan UPC dengan Kamera.');this.value='';return}
   try{
-    const detector=new BarcodeDetector({formats:['upc_a','upc_e','ean_13','ean_8','code_128','code_39','itf']});
-    let image;
-    if('createImageBitmap' in window) image=await createImageBitmap(file);
-    else image=file;
-    const codes=await detector.detect(image);
-    if(image.close)image.close();
-    if(!codes.length){setStatus('Barcode belum terbaca dari foto. Ambil foto lebih dekat, terang, dan lurus, atau gunakan Scan dengan Kamera.');return}
+    const formats=['upc_a','upc_e','ean_13','ean_8','code_128','code_39','itf'];
+    const supported=await BarcodeDetector.getSupportedFormats().catch(()=>[]);
+    const fs=formats.filter(f=>supported.includes(f));
+    const det=new BarcodeDetector(fs.length?{formats:fs}:undefined);
+    const img=await createImageBitmap(file);
+    const codes=await det.detect(img);img.close();
+    if(!codes.length){setStatus('UPC belum terbaca. Ambil foto dekat, terang, dan lurus.');return}
     const code=codes[0].rawValue;
-    document.getElementById('kode').value=code;
+    document.getElementById('upc').value=code;
     document.getElementById('cari').value=code;
-    setStatus('Barcode terbaca: '+code+'. Sedang mencari nama produk…');
-    await cariNamaProduk();
-  }catch(e){setStatus('Gagal membaca foto barcode. Coba scan dengan kamera atau ketik kodenya.');}
+    setStatus('UPC terbaca: '+code+'. Mencari barang yang sudah tersimpan…');
+    const b=cariKode(code);
+    if(b){isiDariBarang(b);setStatus('UPC cocok dengan barang '+b.nama+'. Barcode internal: '+(b.kode||'belum diisi')+'.');}
+    else await cariNamaProduk();
+  }catch(e){setStatus('Gagal membaca foto. Coba kamera langsung atau masukkan UPC manual.')}
   finally{this.value='';}
 });
+function isiDariBarang(b){
+  document.getElementById('nama').value=b.nama;
+  document.getElementById('upc').value=b.upc||'';
+  document.getElementById('kode').value=b.kode||'';
+}
 async function cariNamaProduk(){
-  let k=document.getElementById('kode').value.trim()||document.getElementById('cari').value.trim();
-  if(!k){setStatus('Masukkan atau scan kode barcode terlebih dahulu.');return}
-  document.getElementById('kode').value=k;
-  const lokal=cariLokal(k);
-  if(lokal){
-    document.getElementById('nama').value=lokal.nama;
-    setStatus('Ditemukan di data DIHO: '+lokal.nama+'. Barcode: '+k+'. Isi stok dan harga lalu simpan sebagai barang baru hanya jika memang diperlukan.');
-    return;
-  }
-  setStatus('Barcode '+k+' terbaca. Sedang mencari nama produk di Open Food Facts…');
+  const k=document.getElementById('upc').value.trim();
+  if(!k){setStatus('Scan atau isi UPC terlebih dahulu.');return}
+  const local=cariKode(k);
+  if(local){isiDariBarang(local);setStatus('Ditemukan di data DIHO: '+local.nama+'. UPC: '+(local.upc||'—')+'. Barcode internal: '+(local.kode||'belum diisi')+'.');return}
+  setStatus('UPC '+k+' terbaca. Mencari nama produk online…');
   try{
     const response=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(k)+'.json');
     if(!response.ok)throw new Error('network');
-    const data=await response.json();
-    const p=data&&data.status===1&&data.product;
+    const data=await response.json(), p=data&&data.status===1&&data.product;
     const name=p&&(p.product_name_id||p.product_name||p.product_name_en||p.abbreviated_product_name);
     if(name){
       document.getElementById('nama').value=name;
-      const brand=p.brands?(' | Merek: '+p.brands):'';
-      setStatus('Nama ditemukan: '+name+brand+'. Barcode: '+k+'. Periksa nama barang sebelum menyimpan.');
-    }else{
-      setStatus('Barcode '+k+' terbaca, tetapi nama belum ditemukan di basis data online. Isi nama barang secara manual; setelah disimpan, DIHO akan mengenalinya di perangkat ini.');
-    }
-  }catch(e){
-    setStatus('Barcode '+k+' terbaca, tetapi pencarian nama online gagal (koneksi internet atau layanan sedang bermasalah). Isi nama manual atau coba lagi.');
-  }
+      setStatus('Nama ditemukan: '+name+'. UPC: '+k+'. Masukkan barcode internal sendiri (misalnya 473), stok, dan harga.');
+    }else setStatus('UPC '+k+' belum ditemukan online. Isi nama barang manual dan masukkan barcode internal sendiri, misalnya 473.');
+  }catch(e){setStatus('UPC '+k+' terbaca, tetapi pencarian online gagal. Isi nama manual dan barcode internal sendiri, misalnya 473.')}
 }
 async function kamera(){
-  if(!('BarcodeDetector' in window))return alert('Browser belum mendukung pemindai barcode otomatis. Coba Chrome terbaru, atau gunakan foto/ketik kode jika tersedia.');
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return alert('Kamera membutuhkan HTTPS dan izin kamera. Buka aplikasi melalui alamat GitHub Pages.');
+  if(!('BarcodeDetector' in window))return alert('Browser belum mendukung scan otomatis. Coba Chrome terbaru atau isi UPC manual.');
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return alert('Kamera membutuhkan HTTPS dan izin kamera.');
   try{
     let formats=['upc_a','upc_e','ean_13','ean_8','code_128','code_39','itf'];
-    let supported=await BarcodeDetector.getSupportedFormats().catch(()=>[]);
+    const supported=await BarcodeDetector.getSupportedFormats().catch(()=>[]);
     formats=formats.filter(f=>supported.includes(f));
     const det=new BarcodeDetector(formats.length?{formats}:undefined);
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
     const v=document.getElementById('video');v.hidden=false;v.srcObject=stream;await v.play();
-    document.getElementById('stopCamera').hidden=false;
-    scanAktif=true;setStatus('Arahkan barcode ke kamera. Tahan stabil dan pastikan garis barcode terlihat jelas.');
+    document.getElementById('stopCamera').hidden=false;scanAktif=true;
+    setStatus('Arahkan UPC/barcode pabrik ke kamera. Setelah terbaca, DIHO akan mencari barang berdasarkan UPC.');
     async function scan(){
       if(!scanAktif||!stream)return;
       try{
         const r=await det.detect(v);
         if(r.length){
           const code=r[0].rawValue;
-          document.getElementById('kode').value=code;
+          document.getElementById('upc').value=code;
           document.getElementById('cari').value=code;
           stopKamera();
-          setStatus('Barcode terbaca: '+code+'. Sedang mencari nama produk…');
-          await cariNamaProduk();return;
+          const b=cariKode(code);
+          if(b){isiDariBarang(b);document.getElementById('hasil').textContent='Ditemukan: '+b.nama+' | UPC: '+(b.upc||'—')+' | Barcode internal: '+(b.kode||'—')+' | Stok '+b.stok+' | '+rupiah(b.harga);setStatus('UPC cocok. Barang ditemukan: '+b.nama+'.');}
+          else await cariNamaProduk();
+          return;
         }
       }catch(e){}
       if(scanAktif)requestAnimationFrame(scan);
     }
     scan();
-  }catch(e){stopKamera();alert('Kamera gagal dibuka. Izinkan akses kamera di Chrome dan pastikan halaman memakai HTTPS.')}
+  }catch(e){stopKamera();alert('Kamera gagal dibuka. Izinkan kamera di Chrome dan pastikan memakai HTTPS.')}
 }
 function stopKamera(){
   scanAktif=false;
