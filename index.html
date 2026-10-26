@@ -31,9 +31,13 @@ table{width:100%;text-align:left;border-collapse:collapse}td,th{padding:8px;bord
 <input id="kode" placeholder="Contoh barcode toko: 473" inputmode="numeric">
 
 <div id="areaGambarProduk" style="margin:12px 0;padding:12px;border:1px dashed #b7c9bf;border-radius:10px;text-align:center">
-  <p id="teksGambarProduk" class="small">Gambar depan produk akan muncul di sini setelah UPC dicari online atau barcode internal cocok dengan barang yang tersimpan.</p>
+  <p id="teksGambarProduk" class="small">Gambar depan produk akan tampil di sini. Jika foto online tidak tersedia, ambil atau pilih foto produk sendiri.</p>
   <img id="gambarProduk" alt="Gambar bagian depan produk" hidden style="max-width:100%;max-height:240px;object-fit:contain;border-radius:8px">
 </div>
+<div class="actions">
+  <button type="button" class="secondary" onclick="document.getElementById('fotoProdukManual').click()">🖼️ Foto / Pilih Gambar Produk</button>
+</div>
+<input id="fotoProdukManual" type="file" accept="image/*" capture="environment" hidden>
 
 <div class="actions">
 <button type="button" onclick="document.getElementById('foto').click()">📷 Foto / Pilih Foto UPC</button>
@@ -132,7 +136,7 @@ function tambah(){
  if(!Number.isInteger(stok)||stok<0)return alert('Stok awal harus angka bulat 0 atau lebih');if(!Number.isFinite(harga)||harga<0)return alert('Isi harga jual yang benar');
  if(barang.some(b=>b.upc===upc||b.kode===kode))return alert('UPC atau barcode internal sudah digunakan barang lain');
  barang.push({id:Date.now(),nama,upc,kode,stok,harga,gambar:document.getElementById('gambarProduk').hidden?'':document.getElementById('gambarProduk').src});simpan();tampil();alert('Barang tersimpan');
- ['nama','upc','kode','stok','harga'].forEach(id=>document.getElementById(id).value='');setStatus('Barang tersimpan. UPC dan barcode internal disimpan terpisah.');
+ ['nama','upc','kode','stok','harga'].forEach(id=>document.getElementById(id).value='');tampilGambarProduk('');setStatus('Barang tersimpan. UPC dan barcode internal disimpan terpisah.');
 }
 function tampil(){
  const q=document.getElementById('filter').value.toLowerCase();
@@ -206,6 +210,32 @@ async function fotoScan(file){
  try{const supported=await BarcodeDetector.getSupportedFormats(),formats=['upc_a','upc_e','ean_13','ean_8'].filter(f=>supported.includes(f)),det=new BarcodeDetector(formats.length?{formats}:undefined),img=await createImageBitmap(file),codes=await det.detect(img);img.close();if(!codes.length){setStatus('UPC belum terbaca. Coba foto lebih dekat dan terang.');return}await terimaUPC(codes[0].rawValue)}catch(e){setStatus('Foto gagal dipindai. Coba scan dengan kamera langsung.')}
 }
 document.getElementById('foto').addEventListener('change',function(){if(this.files&&this.files[0])fotoScan(this.files[0]);this.value=''});
+
+document.getElementById('fotoProdukManual').addEventListener('change',function(){
+ const file=this.files&&this.files[0];
+ if(!file){return}
+ if(!file.type.startsWith('image/')){alert('Pilih file gambar.');this.value='';return}
+ const reader=new FileReader();
+ reader.onload=function(){
+  const img=new Image();
+  img.onload=function(){
+   // Resize image before storing so localStorage is less likely to fill up.
+   const canvas=document.createElement('canvas');
+   const max=900,scale=Math.min(1,max/Math.max(img.width,img.height));
+   canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
+   const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
+   const data=canvas.toDataURL('image/jpeg',0.78);
+   tampilGambarProduk(data,document.getElementById('nama').value.trim());
+   setStatus('Foto produk dipilih. Isi data barang lalu tekan Simpan Barang agar foto tersimpan bersama barang.');
+  };
+  img.onerror=function(){setStatus('Foto tidak bisa dibuka. Coba pilih gambar lain.');};
+  img.src=reader.result;
+ };
+ reader.onerror=function(){setStatus('Gagal membaca foto. Coba lagi.');};
+ reader.readAsDataURL(file);
+ this.value='';
+});
+
 let audioCtxDIHO=null;
 function bunyiTit(){
  try{
@@ -259,4 +289,4 @@ function transaksi(){const b=barang.find(x=>x.id==document.getElementById('jual'
 tampil();
 </script>
 </body>
-  </html>
+</html>
