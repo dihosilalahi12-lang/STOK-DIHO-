@@ -37,7 +37,7 @@ table{width:100%;text-align:left;border-collapse:collapse}td,th{padding:8px;bord
 <input id="foto" type="file" accept="image/*" capture="environment" hidden>
 <video id="video" hidden playsinline></video>
 <button id="stopCamera" class="secondary" type="button" onclick="stopKamera()" hidden>Hentikan kamera</button>
-<button type="button" class="secondary" onclick="cariNamaProduk()">Cari Nama dari UPC</button>
+<button type="button" class="secondary" onclick="cariNamaProduk()">Cari Nama dari UPC</button>\n<button type="button" class="secondary" onclick="aktifkanAudioDIHO();setTimeout(bunyiTit,100)">🔊 Tes Bunyi Tit</button>
 <p class="small">UPC adalah kode dari pabrik/kemasan. Barcode internal adalah kode buatan toko, misalnya 473. Scan kamera membaca UPC dan mengisi kolom UPC saja; kamu isi barcode internal sendiri.</p>
 <p id="statusProduk" class="status" aria-live="polite">Isi nama barang, UPC, dan barcode internal pada kolom terpisah.</p>
 
@@ -133,23 +133,38 @@ async function fotoScan(file){
  try{const supported=await BarcodeDetector.getSupportedFormats(),formats=['upc_a','upc_e','ean_13','ean_8'].filter(f=>supported.includes(f)),det=new BarcodeDetector(formats.length?{formats}:undefined),img=await createImageBitmap(file),codes=await det.detect(img);img.close();if(!codes.length){setStatus('UPC belum terbaca. Coba foto lebih dekat dan terang.');return}await terimaUPC(codes[0].rawValue)}catch(e){setStatus('Foto gagal dipindai. Coba scan dengan kamera langsung.')}
 }
 document.getElementById('foto').addEventListener('change',function(){if(this.files&&this.files[0])fotoScan(this.files[0]);this.value=''});
+let audioCtxDIHO=null;
 function bunyiTit(){
  try{
   const AudioCtx=window.AudioContext||window.webkitAudioContext;
   if(!AudioCtx)return;
-  const ctx=new AudioCtx();
-  const osc=ctx.createOscillator();
-  const gain=ctx.createGain();
-  osc.type='sine';
-  osc.frequency.setValueAtTime(1000,ctx.currentTime);
-  gain.gain.setValueAtTime(0.0001,ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.14);
-  osc.connect(gain);gain.connect(ctx.destination);
-  osc.start();osc.stop(ctx.currentTime+0.15);
-  osc.onended=()=>ctx.close();
+  if(!audioCtxDIHO)audioCtxDIHO=new AudioCtx();
+  const play=()=>{
+   const ctx=audioCtxDIHO;
+   const osc=ctx.createOscillator();
+   const gain=ctx.createGain();
+   osc.type='sine';
+   osc.frequency.setValueAtTime(1150,ctx.currentTime);
+   gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+   gain.gain.exponentialRampToValueAtTime(0.22,ctx.currentTime+0.015);
+   gain.gain.setValueAtTime(0.22,ctx.currentTime+0.07);
+   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.18);
+   osc.connect(gain);gain.connect(ctx.destination);
+   osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.19);
+  };
+  if(audioCtxDIHO.state==='suspended'){
+   audioCtxDIHO.resume().then(play).catch(()=>{});
+  }else play();
  }catch(e){}
 }
+function aktifkanAudioDIHO(){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(AudioCtx&&!audioCtxDIHO)audioCtxDIHO=new AudioCtx();
+  if(audioCtxDIHO&&audioCtxDIHO.state==='suspended')audioCtxDIHO.resume().catch(()=>{});
+ }catch(e){}
+}
+document.addEventListener('pointerdown',aktifkanAudioDIHO,{once:true});
 async function terimaUPC(code){
  bunyiTit();
  document.getElementById('upc').value=code;setStatus('UPC terbaca: '+code+'. Mencari data barang…');
