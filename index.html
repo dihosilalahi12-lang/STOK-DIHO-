@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DIHO Kasir</title>
+<style>
+body{font:16px Arial;background:#f1f6f2;margin:0;color:#17372b}
+header{background:#123e32;color:white;padding:20px}
+main{padding:15px;max-width:700px;margin:auto}
+section{background:white;padding:15px;margin:12px 0;border-radius:12px}
+input,select,button{box-sizing:border-box;width:100%;padding:12px;margin:5px 0;border-radius:7px;border:1px solid #ccc;font-size:16px}
+button{background:#145744;color:white;border:0;font-weight:bold}
+table{width:100%;text-align:left;border-collapse:collapse}
+td,th{padding:8px;border-bottom:1px solid #ddd}
+</style>
+</head>
+<body>
+<header><h1>DIHO</h1>KASIR • STOK BARANG</header>
+<main>
+<section>
+<h3>Tambah Barang</h3>
+<input id="nama" placeholder="Nama barang">
+<input id="kode" placeholder="Kode barcode">
+<input id="stok" type="number" min="0" placeholder="Stok awal">
+<input id="harga" type="number" min="0" placeholder="Harga jual">
+<button onclick="tambah()">Simpan Barang</button>
+</section>
+
+<section>
+<h3>Cari Barcode</h3>
+<input id="cari" placeholder="Ketik atau scan kode barcode">
+<button onclick="cariBarang()">Cari Barang</button>
+<p id="hasil"></p>
+<button onclick="kamera()">Buka Kamera</button>
+<video id="video" hidden playsinline style="width:100%"></video>
+</section>
+
+<section>
+<h3>Daftar Stok</h3>
+<input id="filter" placeholder="Cari nama barang" oninput="tampil()">
+<table>
+<thead><tr><th>Barang</th><th>Stok</th><th>Harga</th><th>Aksi</th></tr></thead>
+<tbody id="daftar"></tbody>
+</table>
+<p id="jumlah"></p>
+</section>
+
+<section>
+<h3>Stok Masuk / Keluar</h3>
+<select id="pilih"></select>
+<input id="jumlahUbah" type="number" min="1" value="1">
+<button onclick="ubah(1)">Barang Masuk</button>
+<button onclick="ubah(-1)">Barang Keluar</button>
+</section>
+
+<section>
+<h3>Kasir</h3>
+<select id="jual"></select>
+<input id="jumlahJual" type="number" min="1" value="1">
+<button onclick="transaksi()">Jual Barang</button>
+<p id="nota"></p>
+</section>
+</main>
+
+<script>
+let barang=[];
+try{barang=JSON.parse(localStorage.getItem('diho_barang')||'[]')}catch(e){}
+function simpan(){localStorage.setItem('diho_barang',JSON.stringify(barang))}
+function rupiah(n){return 'Rp '+Number(n).toLocaleString('id-ID')}
+function tambah(){
+let n=document.getElementById('nama').value.trim();
+let k=document.getElementById('kode').value.trim();
+let s=Number(document.getElementById('stok').value);
+let h=Number(document.getElementById('harga').value);
+if(!n)return alert('Isi nama barang');
+if(barang.some(b=>b.kode===k&&k))return alert('Kode sudah terdaftar');
+barang.push({id:Date.now(),nama:n,kode:k,stok:s,harga:h});
+simpan();tampil();alert('Barang tersimpan');
+document.getElementById('nama').value='';
+document.getElementById('kode').value='';
+document.getElementById('stok').value='';
+document.getElementById('harga').value='';
+}
+function tampil(){
+let q=document.getElementById('filter').value.toLowerCase();
+let list=barang.filter(b=>(b.nama+' '+b.kode).toLowerCase().includes(q));
+document.getElementById('daftar').innerHTML=list.map(b=>
+'<tr><td>'+aman(b.nama)+'<br><small>'+aman(b.kode)+'</small></td><td>'+b.stok+'</td><td>'+rupiah(b.harga)+'</td><td><button onclick="hapus('+b.id+')">Hapus</button></td></tr>'
+).join('');
+document.getElementById('jumlah').textContent='Jenis barang: '+barang.length+' | Total stok: '+barang.reduce((a,b)=>a+b.stok,0);
+['pilih','jual'].forEach(id=>document.getElementById(id).innerHTML=barang.map(b=>'<option value="'+b.id+'">'+aman(b.nama)+'</option>').join(''));
+}
+function aman(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function hapus(id){if(confirm('Hapus barang?')){barang=barang.filter(b=>b.id!==id);simpan();tampil()}}
+function cariBarang(){
+let k=document.getElementById('cari').value.trim();
+let b=barang.find(x=>x.kode===k);
+document.getElementById('hasil').textContent=b?b.nama+' | Stok '+b.stok+' | '+rupiah(b.harga):'Kode tidak ditemukan';
+}
+function ubah(t){
+let b=barang.find(x=>x.id==document.getElementById('pilih').value);
+let n=Number(document.getElementById('jumlahUbah').value);
+if(!b||n<1)return;
+if(t<0&&b.stok<n)return alert('Stok tidak cukup');
+b.stok+=t*n;simpan();tampil();alert('Stok diperbarui');
+}
+function transaksi(){
+let b=barang.find(x=>x.id==document.getElementById('jual').value);
+let n=Number(document.getElementById('jumlahJual').value);
+if(!b||n<1)return;
+if(b.stok<n)return alert('Stok tidak cukup');
+b.stok-=n;simpan();tampil();
+document.getElementById('nota').textContent='Total '+rupiah(n*b.harga);
+}
+let stream=null;
+async function kamera(){
+if(!window.BarcodeDetector)return alert('Browser belum mendukung pemindai barcode. Gunakan Chrome terbaru atau ketik kode secara manual.');
+try{
+let det=new BarcodeDetector();
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+let v=document.getElementById('video');v.hidden=false;v.srcObject=stream;await v.play();
+async function scan(){
+if(!stream)return;
+try{let r=await det.detect(v);if(r.length){
+document.getElementById('cari').value=r[0].rawValue;cariBarang();
+stream.getTracks().forEach(t=>t.stop());stream=null;v.hidden=true;return;
+}}catch(e){}
+if(stream)requestAnimationFrame(scan);
+}
+scan();
+}catch(e){alert('Kamera gagal dibuka. Pastikan izin kamera aktif dan halaman menggunakan HTTPS.')}
+}
+tampil();
+</script>
+</body>
+</html>
