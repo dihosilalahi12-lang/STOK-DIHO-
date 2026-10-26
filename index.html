@@ -133,7 +133,25 @@ async function fotoScan(file){
  try{const supported=await BarcodeDetector.getSupportedFormats(),formats=['upc_a','upc_e','ean_13','ean_8'].filter(f=>supported.includes(f)),det=new BarcodeDetector(formats.length?{formats}:undefined),img=await createImageBitmap(file),codes=await det.detect(img);img.close();if(!codes.length){setStatus('UPC belum terbaca. Coba foto lebih dekat dan terang.');return}await terimaUPC(codes[0].rawValue)}catch(e){setStatus('Foto gagal dipindai. Coba scan dengan kamera langsung.')}
 }
 document.getElementById('foto').addEventListener('change',function(){if(this.files&&this.files[0])fotoScan(this.files[0]);this.value=''});
+function bunyiTit(){
+ try{
+  const AudioCtx=window.AudioContext||window.webkitAudioContext;
+  if(!AudioCtx)return;
+  const ctx=new AudioCtx();
+  const osc=ctx.createOscillator();
+  const gain=ctx.createGain();
+  osc.type='sine';
+  osc.frequency.setValueAtTime(1000,ctx.currentTime);
+  gain.gain.setValueAtTime(0.0001,ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.18,ctx.currentTime+0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.14);
+  osc.connect(gain);gain.connect(ctx.destination);
+  osc.start();osc.stop(ctx.currentTime+0.15);
+  osc.onended=()=>ctx.close();
+ }catch(e){}
+}
 async function terimaUPC(code){
+ bunyiTit();
  document.getElementById('upc').value=code;setStatus('UPC terbaca: '+code+'. Mencari data barang…');
  const b=cariKode(code);if(b){isiForm(b);setStatus('Barang ditemukan: '+b.nama+'. UPC diisi otomatis; barcode internal: '+(b.kode||'—')+'.')}else await cariNamaProduk();
 }
@@ -151,4 +169,4 @@ function transaksi(){const b=barang.find(x=>x.id==document.getElementById('jual'
 tampil();
 </script>
 </body>
-  </html>
+</html>
