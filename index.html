@@ -1,112 +1,190 @@
-<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#123b32">
-<title>DIHO Kasir & Stok Barang</title>
-<style>
-:root{font-family:Arial,Helvetica,sans-serif;color:#17231f;background:#f3f6f4}
-*{box-sizing:border-box}body{margin:0}header{background:#123b32;color:white;padding:18px 16px}
-header h1{margin:0;font-size:22px}header p{margin:6px 0 0;font-size:13px;opacity:.9}
-main{max-width:900px;margin:auto;padding:14px}.card{background:white;border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 2px 8px #10201812}
-h2{font-size:17px;margin:0 0 12px}.row{display:flex;gap:8px;flex-wrap:wrap}
-input,button{font:inherit;border-radius:9px;padding:12px;border:1px solid #cbd6d0}
-input{width:100%;min-width:0;background:#fff}button{border:0;background:#176b51;color:white;font-weight:700;cursor:pointer}
-button.secondary{background:#e7efeb;color:#174434}button.danger{background:#a42d2d}
-.search{flex:1;min-width:190px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stat{background:#eaf3ee;border-radius:10px;padding:12px}.stat b{display:block;font-size:21px}.stat span{font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;text-align:left;border-bottom:1px solid #e5ebe7;vertical-align:top}th{background:#f0f5f2}
-.tablewrap{overflow-x:auto}.muted{color:#5c6a63;font-size:13px}.tag{display:inline-block;background:#e5f2ea;border-radius:6px;padding:3px 6px;font-size:11px}
-#reader{width:100%;max-width:440px;margin-top:10px}video{width:100%;border-radius:10px}
-.product-name{font-weight:700}.codes{font-size:12px;color:#526158;overflow-wrap:anywhere}
-.hidden{display:none!important}.notice{background:#fff7d8;padding:10px;border-radius:8px;font-size:13px}
-@media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:span 2}th,td{padding:8px 4px}}
-</style>
-</head>
-<body>
-<header><h1>DIHO Kasir & Stok Barang</h1><p>Daftar barang · pencarian UPC/barcode · pemindai kamera</p></header>
-<main>
-<section class="card">
-<h2>Ringkasan stok</h2><div class="stats">
-<div class="stat"><b id="totalItems">0</b><span>Nama barang</span></div>
-<div class="stat"><b id="totalUnits">0</b><span>Total stok awal</span></div>
-<div class="stat"><b id="shownItems">0</b><span>Hasil pencarian</span></div>
-</div>
-</section>
-<section class="card">
-<h2>Cari atau pindai barang</h2>
-<div class="row"><input id="search" class="search" placeholder="Ketik nama, UPC, atau barcode…" autocomplete="off"><button id="scanBtn">📷 Pindai</button></div>
-<div id="scanArea" class="hidden"><p class="muted">Arahkan barcode ke kamera. Izinkan akses kamera jika diminta.</p><video id="video" playsinline></video><div class="row" style="margin-top:8px"><button id="stopBtn" class="secondary">Tutup kamera</button></div><p id="scanMessage" class="muted"></p></div>
-<div id="match" class="notice hidden" style="margin-top:10px"></div>
-</section>
-<section class="card">
-<h2>Daftar barang</h2>
-<p class="muted">Stok awal diambil dari kolom K pada gambar laporan yang dikirim. Harga belum diisi. Perubahan stok disimpan di perangkat ini.</p>
-<div class="tablewrap"><table><thead><tr><th>Barang</th><th>Barcode</th><th>UPC</th><th>Stok</th><th>Aksi</th></tr></thead><tbody id="items"></tbody></table></div>
-<p id="empty" class="muted hidden">Barang tidak ditemukan.</p>
-<div class="row" style="margin-top:12px"><button id="exportBtn" class="secondary">Ekspor CSV</button><button id="resetBtn" class="danger">Reset ke data awal</button></div>
-</section>
-<section class="card">
-<h2>Catatan</h2><p class="muted">Nomor barcode internal dan UPC disimpan sebagai teks agar angka nol di depan tidak hilang. Pemindaian kamera memerlukan browser yang mendukung BarcodeDetector dan koneksi HTTPS. Jika kamera tidak mendukung format barcode tertentu, gunakan kolom pencarian.</p>
-</section>
-</main>
-<script>
-const DATA_AWAL = [{"barcode": "12741", "upc": "8993007000239", "name": "Susu indomilk kids cokelat 115ml", "stock": 19, "price": 0}, {"barcode": "13603", "upc": "7006347", "name": "Susu indomilk kids plain 115ml", "stock": 2, "price": 0}, {"barcode": "5432", "upc": "8999898963219", "name": "Diamond Milk Stroberi 125", "stock": 1, "price": 0}, {"barcode": "3254", "upc": "8992753182008", "name": "Frisian Flag Milky Choco 115ml", "stock": 11, "price": 0}, {"barcode": "5369", "upc": "8992696523081", "name": "Nestle Milo 110ml", "stock": 36, "price": 0}, {"barcode": "4101", "upc": "8992753033737", "name": "Frisian Purefarm Strawberry 225ml", "stock": 10, "price": 0}, {"barcode": "13138", "upc": "8992388145850", "name": "Nu choco hazelnut tea 225ml", "stock": 6, "price": 0}, {"barcode": "13394", "upc": "921031198", "name": "Hilo protein chocofit 200ml/190ml", "stock": 2, "price": 0}, {"barcode": "13395", "upc": "1030085", "name": "Hilo calcium coffe tirami 200ml", "stock": 2, "price": 0}, {"barcode": "13571", "upc": "802141017", "name": "Prenagen UHT Nas 185ml", "stock": 6, "price": 0}, {"barcode": "7071", "upc": "8992696521629", "name": "Dancow Coklat 180ml", "stock": 9, "price": 0}, {"barcode": "4827", "upc": "8992696523067", "name": "Nestle Milo 180ml", "stock": 12, "price": 0}, {"barcode": "2027", "upc": "8992696525917", "name": "Milo UHT Nutriactiv cereal 180", "stock": 26, "price": 0}, {"barcode": "5668", "upc": "7499221163183", "name": "Yoguruto Original 200ml", "stock": 6, "price": 0}, {"barcode": "5666", "upc": "7499221123132", "name": "Yoguruto Strawberry 200ml", "stock": 11, "price": 0}, {"barcode": "5667", "upc": "7499221133162", "name": "Yoguruto Peach 200ml", "stock": 6, "price": 0}, {"barcode": "13142", "upc": "7499221232698", "name": "HB mirukurt banana 180ml", "stock": 5, "price": 0}, {"barcode": "10530", "upc": "8998009010590", "name": "Ultra Milk cokelat 125ml", "stock": 16, "price": 0}, {"barcode": "3690", "upc": "8998009010569", "name": "Ultra Milk COKLAT 200ml", "stock": 35, "price": 0}, {"barcode": "443", "upc": "8998009010231", "name": "ULTRA MILK CKLT 250 ml", "stock": 13, "price": 0}, {"barcode": "6737", "upc": "8998009010606", "name": "Ultra Milk Stroberi 125ml", "stock": 15, "price": 0}, {"barcode": "4699", "upc": "8998009010576", "name": "Ultra Milk UHT strawberry 200ml", "stock": 45, "price": 0}, {"barcode": "4700", "upc": "8998009010248", "name": "Ultra Milk UHT strawberry 250ml", "stock": 46, "price": 0}, {"barcode": "4697", "upc": "8998009010552", "name": "Ultra Milk UHT full cream 200ml", "stock": 15, "price": 0}, {"barcode": "7014", "upc": "8998009010262", "name": "Ultra Milk Low fat UHT 250ml", "stock": 29, "price": 0}, {"barcode": "9348", "upc": "8993200666218", "name": "Cimory FM Strawberry 250ml", "stock": 17, "price": 0}, {"barcode": "10315", "upc": "8993200666928", "name": "Cimory UHT Marie biskuit 250ml", "stock": 10, "price": 0}, {"barcode": "9346", "upc": "8993200666201", "name": "Cimory FM matcha 250ml", "stock": 5, "price": 0}, {"barcode": "481", "upc": "8997035563544", "name": "Pocari Sweat 350ml", "stock": 13, "price": 0}, {"barcode": "482", "upc": "8997035563414", "name": "Pocari Sweat 500ml", "stock": 20, "price": 0}, {"barcode": "5346", "upc": "8997035111110", "name": "Pocari Sweat 330ml kaleng", "stock": 12, "price": 0}, {"barcode": "378", "upc": "8995227500582", "name": "Panda kaleng 310ml cincau hitam", "stock": 13, "price": 0}, {"barcode": "368", "upc": "8995227502074", "name": "Kaki tiga klg 320ml jeruk nipis", "stock": 11, "price": 0}, {"barcode": "366", "upc": "8995227500230", "name": "Kaki tiga kaleng 320ml anggur", "stock": 7, "price": 0}, {"barcode": "371", "upc": "8995227500278", "name": "Kaki tiga klg 320ml leci", "stock": 8, "price": 0}, {"barcode": "369", "upc": "8995227500308", "name": "Kaki tiga klg 320ml jeruk", "stock": 9, "price": 0}, {"barcode": "1174", "upc": "8999988888835", "name": "Cap Badak klg 320ml melon", "stock": 4, "price": 0}, {"barcode": "2533", "upc": "8992772586030", "name": "Adem Sari Sparkling HL 320ml", "stock": 8, "price": 0}, {"barcode": "2531", "upc": "8992772586016", "name": "Adem sari herbal lemon 320ml", "stock": 8, "price": 0}, {"barcode": "376", "upc": "8995227500995", "name": "Kaki tiga anak 238ml leci", "stock": 7, "price": 0}, {"barcode": "7772", "upc": "0738989314015", "name": "Guinness 320ml", "stock": 13, "price": 0}, {"barcode": "3626", "upc": "8999908808905", "name": "Hemaviton C1000 Less Sugar 330ml", "stock": 3, "price": 0}, {"barcode": "9587", "upc": "8996006853127", "name": "Tebs sparkling mix fruit 330ml", "stock": 3, "price": 0}, {"barcode": "3629", "upc": "8999908442208", "name": "Polaris Soda Water 330ml", "stock": 14, "price": 0}, {"barcode": "13100", "upc": "8886002100007", "name": "Bali Hai 320ml", "stock": 1, "price": 0}, {"barcode": "7094", "upc": "8997206580455", "name": "Bir Bintang 500ml kaleng", "stock": 21, "price": 0}, {"barcode": "6151", "upc": "8997206580424", "name": "Bir Bintang 320ml kaleng", "stock": 34, "price": 0}, {"barcode": "1564", "upc": "8997206582084", "name": "Bir Bintang Anggur Merah 620ml", "stock": 13, "price": 0}, {"barcode": "10001", "upc": "8992756333445", "name": "Anker bir pilsener beer 620ml", "stock": 3, "price": 0}, {"barcode": "10038", "upc": "8997206580400", "name": "Bir Bintang 620ml", "stock": 14, "price": 0}, {"barcode": "3722", "upc": "8991102401135", "name": "Anggur Merah 275ml", "stock": 4, "price": 0}, {"barcode": "10281", "upc": "8997029981354", "name": "Sparkling Red Grape 750ml", "stock": 5, "price": 0}, {"barcode": "363", "upc": "8995227500261", "name": "Kaki tiga plain 500ml botol", "stock": 7, "price": 0}, {"barcode": "1346", "upc": "8995227503941", "name": "Kaki tiga plain 350 botol", "stock": 6, "price": 0}, {"barcode": "362", "upc": "8995227500124", "name": "Kaki tiga plain 200 botol", "stock": 5, "price": 0}, {"barcode": "379", "upc": "8995227500599", "name": "Panda klg 310ml sarang burung", "stock": 4, "price": 0}, {"barcode": "377", "upc": "8995227500377", "name": "Panda kaleng 310ml liang tea", "stock": 3, "price": 0}, {"barcode": "4231", "upc": "8992761002039", "name": "Fanta strawberry 390ml botol", "stock": 10, "price": 0}, {"barcode": "5752", "upc": "8992761145019", "name": "Coca Cola 250ml botol", "stock": 97, "price": 0}, {"barcode": "4241", "upc": "8992761145026", "name": "Sprite 250ml botol", "stock": 173, "price": 0}, {"barcode": "4232", "upc": "", "name": "Coca Cola 390ml botol", "stock": 3, "price": 0}, {"barcode": "4240", "upc": "8992761145033", "name": "Fanta strawberry 250ml botol", "stock": 150, "price": 0}, {"barcode": "4324", "upc": "8992726892514", "name": "Inaco IM Coco Mangga 350ml", "stock": 7, "price": 0}, {"barcode": "4323", "upc": "8992726892521", "name": "Inaco IM Coco Coconut 350ml", "stock": 8, "price": 0}, {"barcode": "425", "upc": "8992726892484", "name": "Inaco IM Coco Leci 350ml", "stock": 2, "price": 0}, {"barcode": "3187", "upc": "8809644083798", "name": "Pororo zero sugar straw 235ml", "stock": 5, "price": 0}, {"barcode": "3183", "upc": "8809644083804", "name": "Pororo Zero sugar apel 235ml", "stock": 2, "price": 0}, {"barcode": "459", "upc": "8998009020216", "name": "Buavita leychee 250ml", "stock": 2, "price": 0}, {"barcode": "460", "upc": "8998009020193", "name": "Buavita Mangga 250ml", "stock": 11, "price": 0}, {"barcode": "4382", "upc": "8998009020223", "name": "Buavita apple 250ml", "stock": 9, "price": 0}, {"barcode": "458", "upc": "8998009020186", "name": "Buavita Guava RL2 250ml", "stock": 28, "price": 0}, {"barcode": "13204", "upc": "8999999614768", "name": "Buavita Korea strawberry 250ml", "stock": 4, "price": 0}, {"barcode": "13205", "upc": "8999999614775", "name": "Buavita Korea muscat grape 250ml", "stock": 3, "price": 0}, {"barcode": "13265", "upc": "8996001601242", "name": "Teh pucuk harum 300ml", "stock": 4, "price": 0}, {"barcode": "6147", "upc": "8998009040313", "name": "Teh Kotak rasa Lemon 300ml", "stock": 10, "price": 0}, {"barcode": "449", "upc": "8998009040023", "name": "TEH KOTAK JASMINE 300ml", "stock": 185, "price": 0}, {"barcode": "2585", "upc": "8992802037020", "name": "Benecol orange 100ml", "stock": 14, "price": 0}, {"barcode": "4024", "upc": "8991102800020", "name": "Kiranti original 150ml", "stock": 23, "price": 0}, {"barcode": "5916", "upc": "8991102900607", "name": "Kiranti Orange 150ml", "stock": 10, "price": 0}, {"barcode": "4707", "upc": "8997009510017", "name": "You C1000 Lemon 140ml", "stock": 4, "price": 0}, {"barcode": "2384", "upc": "8997009510055", "name": "YOU C1000 orange 140ml", "stock": 162, "price": 0}, {"barcode": "4706", "upc": "8997009510130", "name": "You C1000 Apple 140ml", "stock": 8, "price": 0}, {"barcode": "9678", "upc": "8997009510369", "name": "You C1000 mango 140ml", "stock": 14, "price": 0}, {"barcode": "6176", "upc": "8998866202732", "name": "Milkku Strawberry 200ml", "stock": 16, "price": 0}, {"barcode": "6175", "upc": "8998866202725", "name": "Milkku Coklat 200ml", "stock": 9, "price": 0}, {"barcode": "3229", "upc": "8992702005976", "name": "Susu indomilk strawberry 190ml", "stock": 9, "price": 0}, {"barcode": "13602", "upc": "2005945", "name": "Indomilk cokelat 190ml", "stock": 1, "price": 0}, {"barcode": "6421", "upc": "8991002122017", "name": "ABC Kopi susu 200ml", "stock": 20, "price": 0}, {"barcode": "11081", "upc": "8998866202893", "name": "Golda Coffee Cappuccino 200ml", "stock": 16, "price": 0}, {"barcode": "3663", "upc": "8991002121089", "name": "Good Day Originale 250ml", "stock": 5, "price": 0}, {"barcode": "3662", "upc": "8991002121010", "name": "Good Day Funtastic Mocca 250ml", "stock": 8, "price": 0}, {"barcode": "4302", "upc": "8991002121065", "name": "Good Day Avocado 250ml btl", "stock": 6, "price": 0}, {"barcode": "4401", "upc": "8998866201841", "name": "Golda Coffee Dolce Latte 200ml", "stock": 17, "price": 0}, {"barcode": "13596", "upc": "66205658", "name": "Golda coffe aren latte 200ml", "stock": 1, "price": 0}, {"barcode": "2020", "upc": "9556001054005", "name": "Nescafe Mocha 240ml kaleng", "stock": 27, "price": 0}, {"barcode": "9603", "upc": "9556001295248", "name": "Nescafe Ice Black 220ml", "stock": 58, "price": 0}, {"barcode": "7550", "upc": "9556001288592", "name": "Nescafe latte strength 220ml", "stock": 11, "price": 0}, {"barcode": "3355", "upc": "9556001025272", "name": "Nescafe prelate intensity 240ml", "stock": 41, "price": 0}, {"barcode": "7889", "upc": "9556001288561", "name": "Nescafe Caramel macchiato 220ml", "stock": 53, "price": 0}, {"barcode": "7549", "upc": "9556001288547", "name": "Nescafe Cappuccino 220ml", "stock": 36, "price": 0}, {"barcode": "3764", "upc": "9556001047175", "name": "Nescafe Original 240ml", "stock": 10, "price": 0}, {"barcode": "74", "upc": "8992696526921", "name": "Milo Boostup choco 220 ml", "stock": 48, "price": 0}, {"barcode": "12853", "upc": "8996006852038", "name": "Air mineral prima 300ml", "stock": 27, "price": 0}, {"barcode": "3924", "upc": "8992982302208", "name": "Air Vica Aqua 220ml botol", "stock": 23, "price": 0}, {"barcode": "3304", "upc": "8992982203307", "name": "Air M Nestle Pure Life 330ml", "stock": 293, "price": 0}, {"barcode": "2436", "upc": "88860008101336", "name": "Air Mineral Aqua botol 330ml", "stock": 51, "price": 0}];
-const STORAGE_KEY='diho_barang';
-let barang;
-try {
- const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
- barang=Array.isArray(saved)&&saved.length?saved:DATA_AWAL.map(x=>({...x}));
-} catch(e) { barang=DATA_AWAL.map(x=>({...x})); }
-const $=id=>document.getElementById(id);
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(barang))}catch(e){alert('Penyimpanan perangkat penuh atau diblokir. Ekspor data secara berkala.')} }
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function render(){
- const q=$('search').value.trim().toLowerCase();
- const filtered=barang.filter(p=>[p.name,p.barcode,p.upc].some(v=>String(v??'').toLowerCase().includes(q)));
- $('totalItems').textContent=barang.length;
- $('totalUnits').textContent=barang.reduce((s,p)=>s+(Number(p.stock)||0),0);
- $('shownItems').textContent=filtered.length;
- $('items').innerHTML=filtered.map((p)=>`<tr><td><div class="product-name">${esc(p.name)}</div></td><td>${esc(p.barcode||'—')}</td><td>${esc(p.upc||'—')}</td><td><b>${Number(p.stock)||0}</b></td><td><div class="row"><button class="secondary" data-act="minus" data-code="${esc(p.barcode)}">−1</button><button data-act="plus" data-code="${esc(p.barcode)}">+1</button></div></td></tr>`).join('');
- $('empty').classList.toggle('hidden',filtered.length!==0);
-}
-function findItem(code){let c=String(code||'').trim();return barang.find(p=>String(p.barcode||'').trim()===c||String(p.upc||'').trim()===c)}
-function showMatch(code){
- const p=findItem(code);const box=$('match');box.classList.remove('hidden');
- if(!p){box.textContent='Kode '+code+' belum ada dalam daftar. Coba cari nama barang atau periksa kode pada label.';return}
- box.innerHTML='<b>'+esc(p.name)+'</b><br>Barcode: '+esc(p.barcode||'—')+' · UPC: '+esc(p.upc||'—')+'<br>Stok tersedia: <b>'+Number(p.stock||0)+'</b>';
- $('search').value=String(code);render();
-}
-$('search').addEventListener('input',()=>{render();$('match').classList.add('hidden')});
-$('items').addEventListener('click',e=>{
- const b=e.target.closest('button[data-act]');if(!b)return;
- const p=barang.find(x=>String(x.barcode)===b.dataset.code);if(!p)return;
- p.stock=Math.max(0,(Number(p.stock)||0)+(b.dataset.act==='plus'?1:-1));save();render();
-});
-$('resetBtn').addEventListener('click',()=>{if(confirm('Kembalikan daftar ke 106 data awal? Perubahan lokal pada stok akan hilang.')){barang=DATA_AWAL.map(x=>({...x}));save();render();}});
-$('exportBtn').addEventListener('click',()=>{
- const rows=[['barcode_internal','UPC','nama_barang','stok','harga'],...barang.map(p=>[p.barcode,p.upc,p.name,p.stock,p.price||0])];
- const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='DIHO_data_barang.csv';a.click();URL.revokeObjectURL(a.href);
-});
-let stream=null,detector=null,scanLoop=false;
-$('scanBtn').addEventListener('click',startScan);$('stopBtn').addEventListener('click',stopScan);
-async function startScan(){
- $('scanArea').classList.remove('hidden');$('scanMessage').textContent='';
- if(!('BarcodeDetector' in window)){ $('scanMessage').textContent='Browser ini belum mendukung pemindai kamera otomatis. Ketik atau tempel kode ke kotak pencarian.';return;}
- try{
-  detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-  $('video').srcObject=stream;await $('video').play();scanLoop=true;scanFrame();
- }catch(e){$('scanMessage').textContent='Kamera tidak dapat dibuka. Izinkan akses kamera dan gunakan halaman HTTPS.'}
-}
-async function scanFrame(){
- if(!scanLoop||!stream)return;
- try{const codes=await detector.detect($('video'));if(codes.length){const val=codes[0].rawValue;stopScan();showMatch(val);return;}}catch(e){}
- requestAnimationFrame(scanFrame);
-}
-function stopScan(){scanLoop=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('video').srcObject=null;$('scanArea').classList.add('hidden')}
-render();
-</script>
-</body></html>
+// Data tambahan STOK DIHO: hanya BARCODE, UPC, dan NAMA BARANG.
+// Tempel/ gabungkan array ini ke bagian data barang di index.html.
+// UPC disimpan sebagai string agar angka nol di depan tidak hilang.
+
+const barangTambahan = [
+  { barcode: "10545", upc: "8886013402206", nama: "Twisko jagungbakar 30gr" },
+  { barcode: "10479", upc: "8886013221203", nama: "Twisko roasted corn 70gr" },
+  { barcode: "1076", upc: "8994834007354", nama: "French Fries Level 03" },
+  { barcode: "9791", upc: "8886013223207", nama: "French fries premium 62g" },
+  { barcode: "1979", upc: "8998866201711", nama: "Krisbee kruncy jagung bakar 75gr" },
+  { barcode: "929", upc: "8995077606922", nama: "Roni Macaroni Spicy 140 gr" },
+  { barcode: "1975", upc: "8998866201469", nama: "Potabee bbq beef 68gr" },
+  { barcode: "1977", upc: "8998866201728", nama: "Potabee salted egg 68gr" },
+  { barcode: "3874", upc: "8998866201490", nama: "Potabee Grilled Seaweed 68gr" },
+  { barcode: "7730", upc: "8998866202978", nama: "GuriBee Rumput Laut 65gr" },
+  { barcode: "7850", upc: "8998866202954", nama: "Guribee BBQ Balado 68gr" },
+  { barcode: "11185", upc: "8998866203838", nama: "Guribee Keju 65gr" },
+  { barcode: "11082", upc: "8998866203494", nama: "Japota smbl bawang/jeruk n 68gr" },
+  { barcode: "2400", upc: "8998866202473", nama: "Japota Honey Butter 68g" },
+  { barcode: "6155", upc: "8998866202459", nama: "Japota Umami Japanese Seaweed" },
+  { barcode: "2725", upc: "8995077606496", nama: "TOS TOS Tortila Chips BBQ 145g" },
+  { barcode: "2645", upc: "8995077606489", nama: "TOS Nacho Tortila keju 145g" },
+  { barcode: "2644", upc: "8995077606472", nama: "TOS TOS Tortila Chips Corn 145g" },
+  { barcode: "2646", upc: "8993027164034", nama: "Happy tos Tortila JB 140g" },
+  { barcode: "2461", upc: "8993027111601", nama: "Happy tos Corn Chips 160g" },
+  { barcode: "2449", upc: "0089686611649", nama: "Qtela singkong Barbeque 180gr" },
+  { barcode: "7341", upc: "0089686611540", nama: "Qtela Rasa Original 180gr" },
+  { barcode: "2485", upc: "0089686611519", nama: "Qtela singkong original 60g" },
+  { barcode: "8375", upc: "0089686611908", nama: "Qtela Tempe Cabai Original 55gr" },
+  { barcode: "7112", upc: "0089686611670", nama: "Qtela Balado 60gr" },
+  { barcode: "12579", upc: "0089686611601", nama: "Qtela barbeque 20gr" },
+  { barcode: "13171", upc: "", nama: "Qtela balado 20gr" },
+  { barcode: "5336", upc: "0089686598353", nama: "Chitato original 68gr" },
+  { barcode: "9432", upc: "8995102708164", nama: "Mamasuka rumput laut Pedas 4.5g" },
+  { barcode: "10795", upc: "8990800021379", nama: "Alpenlibe lolipop strawberry" },
+  { barcode: "10933", upc: "8990800021362", nama: "Alpenlibe lolipop karamel 10.5g" },
+  { barcode: "11258", upc: "8997878001944", nama: "Jagoan Neon Strobery 6gr" },
+  { barcode: "11257", upc: "8997878701554", nama: "Jagoan Neon Anggur" },
+  { barcode: "12543", upc: "8997878702018", nama: "Milikita lolipop all varian 9gr" },
+  { barcode: "6982", upc: "8999809700025", nama: "Vicee Rasa Lemon" },
+  { barcode: "6843", upc: "8999809700056", nama: "Vicee rasa Anggur" },
+  { barcode: "6844", upc: "8999809700032", nama: "Vicee rasa jeruk" },
+  { barcode: "9321", upc: "8992858690200", nama: "Xonce tab vit c-500mg" },
+  { barcode: "2569", upc: "8993564101905", nama: "Gofress peppermint 35.19mg" },
+  { barcode: "6059", upc: "8997009070177", nama: "Gofress Strawberry" },
+  { barcode: "7373", upc: "0", nama: "Permen Winston 18gr" },
+  { barcode: "11560", upc: "8991115012106", nama: "Big Babol stroberi chupa 20'gr" },
+  { barcode: "7418", upc: "8991115011109", nama: "Big Babol Blueberry 22.5gr" },
+  { barcode: "4036", upc: "9555030107614", nama: "Permen Himalaya lemon flavor 15" },
+  { barcode: "12625", upc: "9555030108581", nama: "Permen Himalaya ginger lemon 15" },
+  { barcode: "834", upc: "8998685011003", nama: "Hexos Mint 12.5g" },
+  { barcode: "835", upc: "8998685012000", nama: "Hexos Lemon Mint 12.5g" },
+  { barcode: "840", upc: "8998685021002", nama: "Nano Nano Kulit Jeruk" },
+  { barcode: "841", upc: "8998685023006", nama: "Nano Nano Belimbing" },
+  { barcode: "8135", upc: "8998685229002", nama: "Nano-Nano Jambu 12.5gr" },
+  { barcode: "8136", upc: "8998685228005", nama: "Nano-Nano Anggur 12.5gr" },
+  { barcode: "4286", upc: "0000955063020", nama: "Strepsil Cool 2,6gr" },
+  { barcode: "4285", upc: "0000955062962", nama: "Strepsil Original 2,6gr" },
+  { barcode: "9598", upc: "8993560155445", nama: "Strepsil menthol & vanila F 2.6" },
+  { barcode: "10184", upc: "0000508195154", nama: "Fisherman's friend original 25g" },
+  { barcode: "10181", upc: "0000508540046", nama: "Fisherman's friend original 25g" },
+  { barcode: "2580", upc: "8992858687101", nama: "Woods permen original 15gr" },
+  { barcode: "10828", upc: "8992759174090", nama: "Nice living 2000 helai 1000gr" },
+  { barcode: "13595", upc: "0", nama: "Nice towel serbaguna 500s" },
+  { barcode: "740", upc: "8992759218046", nama: "Jolly kuliner roll 10roll 2play" },
+  { barcode: "1550", upc: "0", nama: "Tissue Jolly Napkin 240's" },
+  { barcode: "7045", upc: "4970129750031", nama: "Bulpen Snowman V-6 Blue" },
+  { barcode: "12487", upc: "8993163410019", nama: "Sierra facial tissue 600's" },
+  { barcode: "9574", upc: "8992931001848", nama: "Tessa towel roll 100's" },
+  { barcode: "6666", upc: "8992931001220", nama: "Tessa Nature 150's THNS 02" },
+  { barcode: "2097", upc: "8992931005020", nama: "Tessa 260's TP-02" },
+  { barcode: "7344", upc: "8992931005228", nama: "Tessa Interfold F Tissue TP 22" },
+  { barcode: "9875", upc: "8992931005105", nama: "Tessa tp-10 150's" },
+  { barcode: "4107", upc: "8992931005235", nama: "Tissue Tessa 200sheets buy 1 Get" },
+  { barcode: "225", upc: "8993053111149", nama: "Paseo facial box 200's" },
+  { barcode: "12527", upc: "0", nama: "Tissue serap minyak 20's all" },
+  { barcode: "227", upc: "8993053121018", nama: "Paseo elegant 250's/510play" },
+  { barcode: "229", upc: "8993053121407", nama: "Paseo smart pack 500+40's" },
+  { barcode: "4661", upc: "8993053121360", nama: "Paseo Baby Pure Soft 130's" },
+  { barcode: "232", upc: "8993053121391", nama: "Paseo ultra soft 100's" },
+  { barcode: "233", upc: "8993053131239", nama: "Paseo pure soft 50's" },
+  { barcode: "230", upc: "8993053131246", nama: "Paseo ultra soft 40's" },
+  { barcode: "8345", upc: "8993053131017", nama: "Paseo Elegant 108 ply 50's" },
+  { barcode: "12563", upc: "8993053141771", nama: "Paseo elegant hanky parfume 24p" },
+  { barcode: "243", upc: "8992759124354", nama: "Nice 180's/360 helai" },
+  { barcode: "13594", upc: "0", nama: "Nice towel serbaguna 120s" },
+  { barcode: "2107", upc: "8992931025011", nama: "Multi 260's" },
+  { barcode: "12436", upc: "8992931002197", nama: "Tissue multi 160'S-2P MP11" },
+  { barcode: "12949", upc: "8994462940054", nama: "Neabeauty facial 500's" },
+  { barcode: "12875", upc: "8991004028416", nama: "Tisu neabeauty serbaguna 200gr" },
+  { barcode: "4418", upc: "8993163510160", nama: "Tissue Sierra 250-2 ply" },
+  { barcode: "937", upc: "8993163502059", nama: "Montiss soft pack 200's" },
+  { barcode: "939", upc: "8993163502066", nama: "Montiss soft pack 150's" },
+  { barcode: "941", upc: "8993163502134", nama: "Montiss travelpack 50's" },
+  { barcode: "938", upc: "8993163502080", nama: "Montiss soft pack 120's" },
+  { barcode: "940", upc: "8993163502103", nama: "Montiss compact interfold 200's" },
+  { barcode: "9159", upc: "8992931001589", nama: "Tissue Tessa Nature 60's Coklat" },
+  { barcode: "2113", upc: "8992931005099", nama: "Tessa looney 50's" },
+  { barcode: "12810", upc: "8993163505036", nama: "Travel favour gentle&soft 50's" },
+  { barcode: "7396", upc: "8992759170580", nama: "Tissue Jolly 250's" },
+  { barcode: "8515", upc: "0089686611236", nama: "Qtela Tempe orek 100gr" },
+  { barcode: "12519", upc: "8993039243482", nama: "Regal dark marie choco 120gr" },
+  { barcode: "7141", upc: "8997004301429", nama: "Oishi Sponge Coklat 110gr" },
+  { barcode: "1969", upc: "8998866613262", nama: "Sukses isi 2 SOTO MIE 111g" },
+  { barcode: "7145", upc: "8997004301245", nama: "Oishi Pillows Ubi 110gr" },
+  { barcode: "8465", upc: "8998694121403", nama: "Bringz Lumier cokelat 100gr" },
+  { barcode: "813", upc: "8998694120987", nama: "Choco mania Cheese 90g" },
+  { barcode: "812", upc: "8998694120345", nama: "Choco Mania Rich Chocolate 90g" },
+  { barcode: "6154", upc: "8996001355978", nama: "Beng-beng Share It 9.5gr" },
+  { barcode: "4271", upc: "8993175538596", nama: "Nabati Bites Richoco 112/100gr" },
+  { barcode: "1480", upc: "7622300761349", nama: "Oreo Mini Original 61,3gr" },
+  { barcode: "3793", upc: "8995108509550", nama: "Kuaci rebo original 70gr" },
+  { barcode: "3792", upc: "8995108509567", nama: "Kuaci rebo Milk Flavor 70gr" },
+  { barcode: "5347", upc: "8995077606113", nama: "Fuzo Kuaci Susu 140gr" },
+  { barcode: "5355", upc: "8995108500052", nama: "Kuaci rebo Milk Flavor 150gr" },
+  { barcode: "5356", upc: "8995108500038", nama: "Kuaci rebo Original 150gr" },
+  { barcode: "13458", upc: "#N/A", nama: "Kusuka kari ayam 20gr" },
+  { barcode: "11275", upc: "8997233930209", nama: "Kusuka jagung amerika 20gr" },
+  { barcode: "2528", upc: "8997233930582", nama: "Kusuka Ubi Mix Honey 40g" },
+  { barcode: "2888", upc: "8997233930803", nama: "Kusuka Ubi Madu 42g" },
+  { barcode: "2889", upc: "8997233930858", nama: "Kusuka Ubi BBQ 42g" },
+  { barcode: "2898", upc: "0653314503561", nama: "Kusuka Toping Balado 60g" },
+  { barcode: "2459", upc: "0653314505510", nama: "Kusuka Super Pedas 50g" },
+  { barcode: "1070", upc: "8997233930322", nama: "Kusuka Ghost Pepper 50gr" },
+  { barcode: "13080", upc: "#N/A", nama: "Kusuka ubi keju balado 42gr" },
+  { barcode: "2359", upc: "0653314504513", nama: "Kusuka rumput laut 60gr" },
+  { barcode: "2358", upc: "0053314502234", nama: "Kusuka keju bakar 60gr" },
+  { barcode: "2450", upc: "0653314502120", nama: "Kusuka original 180gr" },
+  { barcode: "2452", upc: "0653314502540", nama: "Kusuka Balado spicy 180gr" },
+  { barcode: "2451", upc: "0053314502111", nama: "Kusuka Barbeque 180gr" },
+  { barcode: "2453", upc: "0653314506012", nama: "Kusuka Rumput Laut 180gr" },
+  { barcode: "2401", upc: "0653314502144", nama: "Kusuka Keju Bakar 180gr" },
+  { barcode: "2364", upc: "0653314502137", nama: "Kusuka cheese burger 180gr" },
+  { barcode: "10214", upc: "8998866619264", nama: "Soklin antiseptik bag 1.4kg" },
+  { barcode: "285", upc: "8999999558079", nama: "Rinso anti noda rose fresh 40g" },
+  { barcode: "284", upc: "0", nama: "Rinso anti noda classic 40g" },
+  { barcode: "6826", upc: "8998866618281", nama: "Daia Clean&Fresh Hijab 53gr" },
+  { barcode: "1856", upc: "8998866607360", nama: "Daia putih sachet 55gr" },
+  { barcode: "1857", upc: "8998866608701", nama: "Daia soft pink sachet 53gr" },
+  { barcode: "1858", upc: "8998866610230", nama: "Daia violet sachet 55gr" },
+  { barcode: "1854", upc: "8998866602211", nama: "Daia bunga sachet 53gr" },
+  { barcode: "1855", upc: "8998866604956", nama: "Daia lemon sachet 53gr" },
+  { barcode: "2747", upc: "8998866623803", nama: "Soklin lantai citrus garde 780ml" },
+  { barcode: "1912", upc: "8998866679602", nama: "Soklin lantai fruity apel 780ml" },
+  { barcode: "1913", upc: "8998866679664", nama: "Soklin lantai Citruslemon 780ml" },
+  { barcode: "1917", upc: "8998866600569", nama: "Soklin lantai hijau 310ml" },
+  { barcode: "1919", upc: "8998866600538", nama: "Soklin lantai Rose Bouquet 345ml" },
+  { barcode: "93", upc: "8886012381199", nama: "Dahlia serap bau rak sepat D-119" },
+  { barcode: "2326", upc: "8992745325420", nama: "Stella lemon fresh 160/225ml" },
+  { barcode: "2325", upc: "8992745610533", nama: "Stella japanese sakura 225ml" },
+  { barcode: "2320", upc: "8992745320142", nama: "Stella apple fiesta 160/225ml" },
+  { barcode: "2321", upc: "8992745560449", nama: "Stella caffe latte 160/225ml" },
+  { barcode: "70", upc: "8886012826263", nama: "Freshgo Lavender 225ml" },
+  { barcode: "2314", upc: "8992745320326", nama: "Stella orange twist 200ml" },
+  { barcode: "3404", upc: "8992745320302", nama: "Stella spray lemon fresh 200ml" },
+  { barcode: "2318", upc: "8992745610526", nama: "Stella Japanese Sakura 350+50ml" },
+  { barcode: "9133", upc: "8992745610779", nama: "Stella parfum Caffe latte 350" },
+  { barcode: "2315", upc: "8992745320241", nama: "Stella orange twist 400ml" },
+  { barcode: "2332", upc: "8992745000297", nama: "Stella matic box set green" },
+  { barcode: "8167", upc: "8992745325406", nama: "Stella Matic Alat Blister Set" },
+  { barcode: "11075", upc: "8998989300421", nama: "Roko filter surya merah 16" },
+  { barcode: "529", upc: "8998989110167", nama: "Rokok SURYA 16 coklat" },
+  { barcode: "528", upc: "8998989110129", nama: "Rokok SURYA 12" },
+  { barcode: "5333", upc: "8998989500166", nama: "ROKOK Gudang garam merah 16" },
+  { barcode: "5332", upc: "8998989500128", nama: "ROKOK Gudang garam merah 12" },
+  { barcode: "13302", upc: "#N/A", nama: "Roko xpert premium 20" },
+  { barcode: "531", upc: "8998989300391", nama: "ROKOK SURYA PRO MILD 16's" },
+  { barcode: "530", upc: "8998989121163", nama: "ROKOK SURYA PRO MERAH 16's" },
+  { barcode: "527", upc: "8998989100120", nama: "Rokok GG FILTER 12's" },
+  { barcode: "540", upc: "8999909001909", nama: "ROKOK 234 Magnum Hitam 12" },
+  { barcode: "10576", upc: "8997223733971", nama: "Roko Twizz royal crush 16" },
+  { barcode: "12246", upc: "8997223735616", nama: "Roko Twizz prime 16 / TWP16" },
+  { barcode: "4070", upc: "8999909000988", nama: "ROKOK sampoerna 12 kretek LE" },
+  { barcode: "598", upc: "8999909085114", nama: "ROKOK Sampoerna Kretek 12" },
+  { barcode: "5100", upc: "8999909028234", nama: "ROKOK Dji sam soe 234 12" },
+  { barcode: "541", upc: "8999909000629", nama: "ROKOK Dji Sam Soe 12" },
+  { barcode: "542", upc: "8999909010567", nama: "ROKOK Dji Sam Soe 16" },
+  { barcode: "11366", upc: "8990899890153", nama: "Roko 153 Kretek" },
+  { barcode: "2953", upc: "#N/A", nama: "Roko 153 Kretek / SLT20" },
+  { barcode: "539", upc: "8999909028999", nama: "ROKOK 234 Super Premium 12" },
+  { barcode: "590", upc: "8999909010475", nama: "ROKOK Dji Sam Soe 16 Super" },
+  { barcode: "4413", upc: "0", nama: "Petek M2000 m-08" },
+  { barcode: "7428", upc: "0", nama: "Petek G2000 premium light taurus" },
+  { barcode: "7649", upc: "0", nama: "Petek G2000 Lighter Liv/newyork" },
+  { barcode: "6396", upc: "0", nama: "Petek Hugo h428/liverpool" },
+  { barcode: "5942", upc: "9555143600019", nama: "Petek cricket" },
+  { barcode: "7937", upc: "8991663000723", nama: "Petek gas 311 ws osaka" },
+  { barcode: "5457", upc: "0", nama: "Petek G2000 Taurus/Nagaya" },
+  { barcode: "1630", upc: "8991666000256", nama: "Petek zurich ZR-08" },
+];
