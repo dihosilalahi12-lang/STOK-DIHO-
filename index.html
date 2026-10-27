@@ -16,12 +16,13 @@ input{width:100%;min-width:0;background:#fff}button{border:0;background:#176b51;
 button.secondary{background:#e7efeb;color:#174434}button.danger{background:#a42d2d}
 .search{flex:1;min-width:190px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:#eaf3ee;border-radius:10px;padding:12px}.stat b{display:block;font-size:21px}.stat span{font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;text-align:left;border-bottom:1px solid #e5ebe7;vertical-align:top}th{background:#f0f5f2}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;text-align:left;border-bottom:1px solid #e5ebe7;vertical-align:middle}th{background:#f0f5f2}
 .tablewrap{overflow-x:auto}.muted{color:#5c6a63;font-size:13px}.tag{display:inline-block;background:#e5f2ea;border-radius:6px;padding:3px 6px;font-size:11px}
 #reader{width:100%;max-width:440px;margin-top:10px}video{width:100%;border-radius:10px}
 .product-name{font-weight:700}.codes{font-size:12px;color:#526158;overflow-wrap:anywhere}
 .hidden{display:none!important}.notice{background:#fff7d8;padding:10px;border-radius:8px;font-size:13px}
 .form-group{margin-bottom:10px}.form-group label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#33443c}
+.stock-input{width:70px;padding:6px;text-align:center;font-weight:bold}
 @media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:span 2}th,td{padding:8px 4px}}
 </style>
 </head>
@@ -74,7 +75,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;t
 
 <section class="card">
 <h2>Daftar barang</h2>
-<p class="muted">Perubahan stok dan penambahan barang baru disimpan secara otomatis di perangkat ini.</p>
+<p class="muted">Perubahan stok (ketik langsung angka atau tombol ±1) dan penambahan barang baru disimpan otomatis.</p>
 <div class="tablewrap"><table><thead><tr><th>Barang</th><th>Barcode</th><th>UPC</th><th>Stok</th><th>Aksi</th></tr></thead><tbody id="items"></tbody></table></div>
 <p id="empty" class="muted hidden">Barang tidak ditemukan.</p>
 <div class="row" style="margin-top:12px"><button id="exportBtn" class="secondary">Ekspor CSV</button><button id="resetBtn" class="danger">Reset ke data awal</button></div>
@@ -195,114 +196,4 @@ const DATA_AWAL = [
   {"barcode": "2436", "upc": "88860008101336", "name": "Air Mineral Aqua botol 330ml", "stock": 51, "price": 0}
 ];
 
-const STORAGE_KEY='diho_barang';
-let barang;
-try {
- const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
- if(Array.isArray(saved)&&saved.length){
-   const key=p=>String(p.barcode||'').trim()||String(p.upc||'').trim();
-   const byKey=new Map(saved.map(p=>[key(p),p]));
-   barang=DATA_AWAL.map(p=>({...p,...(byKey.get(key(p))||{})}));
-   const known=new Set(DATA_AWAL.map(key));
-   barang.push(...saved.filter(p=>!known.has(key(p))));
- } else barang=DATA_AWAL.map(x=>({...x}));
-} catch(e) { barang=DATA_AWAL.map(x=>({...x})); }
-
-const $=id=>document.getElementById(id);
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(barang))}catch(e){alert('Penyimpanan perangkat penuh atau diblokir.')}}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-
-function render(){
- const q=$('search').value.trim().toLowerCase();
- const filtered=barang.filter(p=>[p.name,p.barcode,p.upc].some(v=>String(v??'').toLowerCase().includes(q)));
- $('totalItems').textContent=barang.length;
- $('totalUnits').textContent=barang.reduce((s,p)=>s+(Number(p.stock)||0),0);
- $('shownItems').textContent=filtered.length;
- $('items').innerHTML=filtered.map((p)=>`<tr><td><div class="product-name">${esc(p.name)}</div></td><td>${esc(p.barcode||'—')}</td><td>${esc(p.upc||'—')}</td><td><b>${Number(p.stock)||0}</b></td><td><div class="row"><button class="secondary" data-act="minus" data-code="${esc(p.barcode)}">−1</button><button data-act="plus" data-code="${esc(p.barcode)}">+1</button></div></td></tr>`).join('');
- $('empty').classList.toggle('hidden',filtered.length!==0);
-}
-
-// Pencarian Manual / Tombol Cari
-$('searchBtn').addEventListener('click',()=>{
- render();
- const q=$('search').value.trim();
- if(q){
-  const found=barang.find(p=>[p.name,p.barcode,p.upc].some(v=>String(v??'').toLowerCase().includes(q.toLowerCase())));
-  const box=$('match');
-  box.classList.remove('hidden');
-  if(found){
-   box.innerHTML='<b>Ditemukan:</b> '+esc(found.name)+'<br>Barcode: '+esc(found.barcode||'—')+' · Stok: <b>'+found.stock+'</b>';
-  } else {
-   box.textContent='Barang "'+q+'" tidak ditemukan.';
-  }
- }
-});
-
-$('search').addEventListener('input',()=>{render();$('match').classList.add('hidden')});
-
-// Penambahan Barang Manual
-$('formAdd').addEventListener('submit',e=>{
- e.preventDefault();
- const name=$('addName').value.trim();
- const barcode=$('addBarcode').value.trim()||('BC'+Date.now().toString().slice(-5));
- const upc=$('addUpc').value.trim();
- const stock=parseInt($('addStock').value)||0;
-
- if(!name)return;
-
- // Cek duplikat barcode
- const exist=barang.find(p=>String(p.barcode)===barcode);
- if(exist){
-   alert('Barcode internal sudah digunakan oleh: '+exist.name);
-   return;
- }
-
- barang.unshift({barcode, upc, name, stock, price:0});
- save();
- render();
- $('formAdd').reset();
- $('addStock').value='1';
- alert('Barang "'+name+'" berhasil ditambahkan!');
-});
-
-$('items').addEventListener('click',e=>{
- const b=e.target.closest('button[data-act]');if(!b)return;
- const p=barang.find(x=>String(x.barcode)===b.dataset.code);if(!p)return;
- p.stock=Math.max(0,(Number(p.stock)||0)+(b.dataset.act==='plus'?1:-1));save();render();
-});
-
-$('resetBtn').addEventListener('click',()=>{if(confirm('Kembalikan daftar ke semua data bawaan? Perubahan lokal akan hilang.')){barang=DATA_AWAL.map(x=>({...x}));save();render();}});
-
-$('exportBtn').addEventListener('click',()=>{
- const rows=[['barcode_internal','UPC','nama_barang','stok','harga'],...barang.map(p=>[p.barcode,p.upc,p.name,p.stock,p.price||0])];
- const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='DIHO_data_barang.csv';a.click();URL.revokeObjectURL(a.href);
-});
-
-let stream=null,detector=null,scanLoop=false;
-$('scanBtn').addEventListener('click',startScan);$('stopBtn').addEventListener('click',stopScan);
-async function startScan(){
- $('scanArea').classList.remove('hidden');$('scanMessage').textContent='';
- if(!('BarcodeDetector' in window)){ $('scanMessage').textContent='Browser ini belum mendukung pemindai kamera otomatis.';return;}
- try{
-  detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-  $('video').srcObject=stream;await $('video').play();scanLoop=true;scanFrame();
- }catch(e){$('scanMessage').textContent='Kamera tidak dapat dibuka. Gunakan HTTPS atau izinkan izin kamera.'}
-}
-async function scanFrame(){
- if(!scanLoop||!stream)return;
- try{const codes=await detector.detect($('video'));if(codes.length){const val=codes[0].rawValue;stopScan();showMatch(val);return;}}catch(e){}
- requestAnimationFrame(scanFrame);
-}
-function showMatch(code){
- const p=barang.find(x=>String(x.barcode)===code||String(x.upc)===code);const box=$('match');box.classList.remove('hidden');
- if(!p){box.textContent='Kode '+code+' belum terdaftar.';return}
- box.innerHTML='<b>'+esc(p.name)+'</b><br>Barcode: '+esc(p.barcode||'—')+'<br>Stok tersedia: <b>'+p.stock+'</b>';
- $('search').value=String(code);render();
-}
-function stopScan(){scanLoop=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('video').srcObject=null;$('scanArea').classList.add('hidden')}
-
-render();
-</script>
-</body></html>
+const STORAGE_KEY='diho_
