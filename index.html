@@ -1,292 +1,112 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#123e32">
+<meta name="theme-color" content="#123b32">
 <title>DIHO Kasir & Stok Barang</title>
 <style>
-*{box-sizing:border-box}body{font:16px Arial,sans-serif;background:#f1f6f2;margin:0;color:#17372b}
-header{background:#123e32;color:white;padding:20px}header h1{margin:0 0 5px}
-main{padding:15px;max-width:760px;margin:auto}section{background:white;padding:15px;margin:12px 0;border-radius:12px;box-shadow:0 2px 8px #0000000a}
-label{display:block;margin-top:8px}input,select,button{width:100%;padding:12px;margin:5px 0;border-radius:7px;border:1px solid #ccc;font-size:16px}
-button{background:#145744;color:white;border:0;font-weight:bold;cursor:pointer}button.secondary{background:#e6efea;color:#123e32;border:1px solid #c5d7cd}button.danger{background:#a52d2d}
-.small{font-size:13px;color:#52675d;line-height:1.45}.status{padding:10px;border-radius:8px;background:#eef5f0;overflow-wrap:anywhere;line-height:1.4}
-video{width:100%;border-radius:10px;background:#111;margin-top:8px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions button{margin:3px 0}
-table{width:100%;text-align:left;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #ddd;vertical-align:top}td button{padding:8px;font-size:13px}
+:root{font-family:Arial,Helvetica,sans-serif;color:#17231f;background:#f3f6f4}
+*{box-sizing:border-box}body{margin:0}header{background:#123b32;color:white;padding:18px 16px}
+header h1{margin:0;font-size:22px}header p{margin:6px 0 0;font-size:13px;opacity:.9}
+main{max-width:900px;margin:auto;padding:14px}.card{background:white;border-radius:14px;padding:15px;margin-bottom:14px;box-shadow:0 2px 8px #10201812}
+h2{font-size:17px;margin:0 0 12px}.row{display:flex;gap:8px;flex-wrap:wrap}
+input,button{font:inherit;border-radius:9px;padding:12px;border:1px solid #cbd6d0}
+input{width:100%;min-width:0;background:#fff}button{border:0;background:#176b51;color:white;font-weight:700;cursor:pointer}
+button.secondary{background:#e7efeb;color:#174434}button.danger{background:#a42d2d}
+.search{flex:1;min-width:190px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:#eaf3ee;border-radius:10px;padding:12px}.stat b{display:block;font-size:21px}.stat span{font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;text-align:left;border-bottom:1px solid #e5ebe7;vertical-align:top}th{background:#f0f5f2}
+.tablewrap{overflow-x:auto}.muted{color:#5c6a63;font-size:13px}.tag{display:inline-block;background:#e5f2ea;border-radius:6px;padding:3px 6px;font-size:11px}
+#reader{width:100%;max-width:440px;margin-top:10px}video{width:100%;border-radius:10px}
+.product-name{font-weight:700}.codes{font-size:12px;color:#526158;overflow-wrap:anywhere}
+.hidden{display:none!important}.notice{background:#fff7d8;padding:10px;border-radius:8px;font-size:13px}
+@media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:span 2}th,td{padding:8px 4px}}
 </style>
 </head>
 <body>
-<header><h1>DIHO</h1>KASIR • STOK BARANG</header>
+<header><h1>DIHO Kasir & Stok Barang</h1><p>Daftar barang · pencarian UPC/barcode · pemindai kamera</p></header>
 <main>
-<section>
-<h3>Tambah Barang</h3>
-<label for="nama">Nama barang</label>
-<input id="nama" placeholder="Nama barang">
-
-<label for="upc">UPC (kode asli dari kemasan)</label>
-<input id="upc" placeholder="Contoh UPC: 0000089" inputmode="numeric">
-
-<label for="kode">Barcode internal (kode toko)</label>
-<input id="kode" placeholder="Contoh barcode toko: 473" inputmode="numeric">
-
-<div id="areaGambarProduk" style="margin:12px 0;padding:12px;border:1px dashed #b7c9bf;border-radius:10px;text-align:center">
-  <p id="teksGambarProduk" class="small">Gambar depan produk akan tampil di sini. Jika foto online tidak tersedia, ambil atau pilih foto produk sendiri.</p>
-  <img id="gambarProduk" alt="Gambar bagian depan produk" hidden style="max-width:100%;max-height:240px;object-fit:contain;border-radius:8px">
+<section class="card">
+<h2>Ringkasan stok</h2><div class="stats">
+<div class="stat"><b id="totalItems">0</b><span>Nama barang</span></div>
+<div class="stat"><b id="totalUnits">0</b><span>Total stok awal</span></div>
+<div class="stat"><b id="shownItems">0</b><span>Hasil pencarian</span></div>
 </div>
-<div class="actions">
-  <button type="button" class="secondary" onclick="document.getElementById('fotoProdukManual').click()">🖼️ Foto / Pilih Gambar Produk</button>
-</div>
-<input id="fotoProdukManual" type="file" accept="image/*" capture="environment" hidden>
-
-<div class="actions">
-<button type="button" onclick="document.getElementById('foto').click()">📷 Foto / Pilih Foto UPC</button>
-<button type="button" onclick="kamera()">▣ Scan UPC dengan Kamera</button>
-</div>
-<input id="foto" type="file" accept="image/*" capture="environment" hidden>
-<video id="video" hidden playsinline></video>
-<button id="stopCamera" class="secondary" type="button" onclick="stopKamera()" hidden>Hentikan kamera</button>
-<button type="button" class="secondary" onclick="cariNamaProduk()">Cari Nama dari UPC</button>\n<button type="button" class="secondary" onclick="aktifkanAudioDIHO();setTimeout(bunyiTit,100)">🔊 Tes Bunyi Tit</button>
-<p class="small">UPC adalah kode dari pabrik/kemasan. Barcode internal adalah kode buatan toko, misalnya 473. Scan kamera membaca UPC dan mengisi kolom UPC saja; kamu isi barcode internal sendiri.</p>
-<p id="statusProduk" class="status" aria-live="polite">Isi nama barang, UPC, dan barcode internal pada kolom terpisah.</p>
-
-<label for="stok">Stok awal</label>
-<input id="stok" type="number" min="0" step="1" placeholder="Stok awal">
-<label for="harga">Harga jual (Rp)</label>
-<input id="harga" type="number" min="0" step="1" placeholder="Harga jual">
-<button type="button" onclick="tambah()">Simpan Barang</button>
 </section>
-
-<section>
-<h3>Cari Barang</h3>
-<label for="cari">UPC atau barcode internal</label>
-<input id="cari" placeholder="Ketik / scan UPC atau barcode internal" inputmode="numeric">
-<div class="actions">
-<button type="button" onclick="cariBarang()">Cari Barang</button>
-<button type="button" class="secondary" onclick="scanKePencarian()">Scan UPC</button>
-</div>
-<p id="hasil" aria-live="polite"></p>
+<section class="card">
+<h2>Cari atau pindai barang</h2>
+<div class="row"><input id="search" class="search" placeholder="Ketik nama, UPC, atau barcode…" autocomplete="off"><button id="scanBtn">📷 Pindai</button></div>
+<div id="scanArea" class="hidden"><p class="muted">Arahkan barcode ke kamera. Izinkan akses kamera jika diminta.</p><video id="video" playsinline></video><div class="row" style="margin-top:8px"><button id="stopBtn" class="secondary">Tutup kamera</button></div><p id="scanMessage" class="muted"></p></div>
+<div id="match" class="notice hidden" style="margin-top:10px"></div>
 </section>
-
-<section>
-<h3>Daftar Stok</h3>
-<input id="filter" placeholder="Cari nama, UPC, atau barcode internal" oninput="tampil()">
-<div style="overflow-x:auto"><table>
-<thead><tr><th>Barang</th><th>Stok</th><th>Harga</th><th>Aksi</th></tr></thead>
-<tbody id="daftar"></tbody>
-</table></div><p id="jumlah"></p>
+<section class="card">
+<h2>Daftar barang</h2>
+<p class="muted">Stok awal diambil dari kolom K pada gambar laporan yang dikirim. Harga belum diisi. Perubahan stok disimpan di perangkat ini.</p>
+<div class="tablewrap"><table><thead><tr><th>Barang</th><th>Barcode</th><th>UPC</th><th>Stok</th><th>Aksi</th></tr></thead><tbody id="items"></tbody></table></div>
+<p id="empty" class="muted hidden">Barang tidak ditemukan.</p>
+<div class="row" style="margin-top:12px"><button id="exportBtn" class="secondary">Ekspor CSV</button><button id="resetBtn" class="danger">Reset ke data awal</button></div>
 </section>
-
-<section>
-<h3>Stok Masuk / Keluar</h3>
-<select id="pilih" aria-label="Pilih barang untuk ubah stok"></select>
-<input id="jumlahUbah" type="number" min="1" step="1" value="1" aria-label="Jumlah stok">
-<div class="actions"><button type="button" onclick="ubah(1)">Barang Masuk</button><button type="button" onclick="ubah(-1)">Barang Keluar</button></div>
-</section>
-
-<section>
-<h3>Kasir</h3>
-<select id="jual" aria-label="Pilih barang untuk dijual"></select>
-<input id="jumlahJual" type="number" min="1" step="1" value="1" aria-label="Jumlah barang dijual">
-<button type="button" onclick="transaksi()">Jual Barang</button><p id="nota" aria-live="polite"></p>
+<section class="card">
+<h2>Catatan</h2><p class="muted">Nomor barcode internal dan UPC disimpan sebagai teks agar angka nol di depan tidak hilang. Pemindaian kamera memerlukan browser yang mendukung BarcodeDetector dan koneksi HTTPS. Jika kamera tidak mendukung format barcode tertentu, gunakan kolom pencarian.</p>
 </section>
 </main>
 <script>
-let barang=[];
-try{
- const saved=JSON.parse(localStorage.getItem('diho_barang')||'[]');
- if(Array.isArray(saved)) barang=saved.map(b=>({
-  ...b,
-  upc:String(b.upc||b.kode||''),
-  kode:String(b.upc && b.kode ? b.kode : '')
- }));
-}catch(e){barang=[]}
-let stream=null,scanAktif=false;
-function simpan(){try{localStorage.setItem('diho_barang',JSON.stringify(barang))}catch(e){alert('Penyimpanan gagal. Periksa ruang penyimpanan perangkat.')}}
-function rupiah(n){return 'Rp '+Number(n||0).toLocaleString('id-ID')}
-function aman(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function setStatus(s){document.getElementById('statusProduk').textContent=s}
-function cariKode(k){k=String(k||'').trim();return k?barang.find(b=>String(b.upc||'').trim()===k||String(b.kode||'').trim()===k):null}
-function tampilGambarProduk(url, nama){
- const img=document.getElementById('gambarProduk'), teks=document.getElementById('teksGambarProduk');
- if(url){
-  img.onerror=()=>{img.hidden=true;teks.hidden=false;teks.textContent='Gambar depan tidak bisa dimuat. Coba cari UPC lagi atau periksa koneksi internet.'};
-  img.onload=()=>{img.hidden=false;teks.hidden=true};
-  img.alt='Gambar bagian depan '+(nama||'produk');
-  img.src=url;
-  img.hidden=false;
-  teks.hidden=true;
- }else{
-  img.removeAttribute('src');img.hidden=true;teks.hidden=false;
-  teks.textContent='Foto depan tidak tersedia untuk UPC ini di database online. Coba UPC lain atau tambahkan foto produk sendiri.';
- }
+const DATA_AWAL = [{"barcode": "12741", "upc": "8993007000239", "name": "Susu indomilk kids cokelat 115ml", "stock": 19, "price": 0}, {"barcode": "13603", "upc": "7006347", "name": "Susu indomilk kids plain 115ml", "stock": 2, "price": 0}, {"barcode": "5432", "upc": "8999898963219", "name": "Diamond Milk Stroberi 125", "stock": 1, "price": 0}, {"barcode": "3254", "upc": "8992753182008", "name": "Frisian Flag Milky Choco 115ml", "stock": 11, "price": 0}, {"barcode": "5369", "upc": "8992696523081", "name": "Nestle Milo 110ml", "stock": 36, "price": 0}, {"barcode": "4101", "upc": "8992753033737", "name": "Frisian Purefarm Strawberry 225ml", "stock": 10, "price": 0}, {"barcode": "13138", "upc": "8992388145850", "name": "Nu choco hazelnut tea 225ml", "stock": 6, "price": 0}, {"barcode": "13394", "upc": "921031198", "name": "Hilo protein chocofit 200ml/190ml", "stock": 2, "price": 0}, {"barcode": "13395", "upc": "1030085", "name": "Hilo calcium coffe tirami 200ml", "stock": 2, "price": 0}, {"barcode": "13571", "upc": "802141017", "name": "Prenagen UHT Nas 185ml", "stock": 6, "price": 0}, {"barcode": "7071", "upc": "8992696521629", "name": "Dancow Coklat 180ml", "stock": 9, "price": 0}, {"barcode": "4827", "upc": "8992696523067", "name": "Nestle Milo 180ml", "stock": 12, "price": 0}, {"barcode": "2027", "upc": "8992696525917", "name": "Milo UHT Nutriactiv cereal 180", "stock": 26, "price": 0}, {"barcode": "5668", "upc": "7499221163183", "name": "Yoguruto Original 200ml", "stock": 6, "price": 0}, {"barcode": "5666", "upc": "7499221123132", "name": "Yoguruto Strawberry 200ml", "stock": 11, "price": 0}, {"barcode": "5667", "upc": "7499221133162", "name": "Yoguruto Peach 200ml", "stock": 6, "price": 0}, {"barcode": "13142", "upc": "7499221232698", "name": "HB mirukurt banana 180ml", "stock": 5, "price": 0}, {"barcode": "10530", "upc": "8998009010590", "name": "Ultra Milk cokelat 125ml", "stock": 16, "price": 0}, {"barcode": "3690", "upc": "8998009010569", "name": "Ultra Milk COKLAT 200ml", "stock": 35, "price": 0}, {"barcode": "443", "upc": "8998009010231", "name": "ULTRA MILK CKLT 250 ml", "stock": 13, "price": 0}, {"barcode": "6737", "upc": "8998009010606", "name": "Ultra Milk Stroberi 125ml", "stock": 15, "price": 0}, {"barcode": "4699", "upc": "8998009010576", "name": "Ultra Milk UHT strawberry 200ml", "stock": 45, "price": 0}, {"barcode": "4700", "upc": "8998009010248", "name": "Ultra Milk UHT strawberry 250ml", "stock": 46, "price": 0}, {"barcode": "4697", "upc": "8998009010552", "name": "Ultra Milk UHT full cream 200ml", "stock": 15, "price": 0}, {"barcode": "7014", "upc": "8998009010262", "name": "Ultra Milk Low fat UHT 250ml", "stock": 29, "price": 0}, {"barcode": "9348", "upc": "8993200666218", "name": "Cimory FM Strawberry 250ml", "stock": 17, "price": 0}, {"barcode": "10315", "upc": "8993200666928", "name": "Cimory UHT Marie biskuit 250ml", "stock": 10, "price": 0}, {"barcode": "9346", "upc": "8993200666201", "name": "Cimory FM matcha 250ml", "stock": 5, "price": 0}, {"barcode": "481", "upc": "8997035563544", "name": "Pocari Sweat 350ml", "stock": 13, "price": 0}, {"barcode": "482", "upc": "8997035563414", "name": "Pocari Sweat 500ml", "stock": 20, "price": 0}, {"barcode": "5346", "upc": "8997035111110", "name": "Pocari Sweat 330ml kaleng", "stock": 12, "price": 0}, {"barcode": "378", "upc": "8995227500582", "name": "Panda kaleng 310ml cincau hitam", "stock": 13, "price": 0}, {"barcode": "368", "upc": "8995227502074", "name": "Kaki tiga klg 320ml jeruk nipis", "stock": 11, "price": 0}, {"barcode": "366", "upc": "8995227500230", "name": "Kaki tiga kaleng 320ml anggur", "stock": 7, "price": 0}, {"barcode": "371", "upc": "8995227500278", "name": "Kaki tiga klg 320ml leci", "stock": 8, "price": 0}, {"barcode": "369", "upc": "8995227500308", "name": "Kaki tiga klg 320ml jeruk", "stock": 9, "price": 0}, {"barcode": "1174", "upc": "8999988888835", "name": "Cap Badak klg 320ml melon", "stock": 4, "price": 0}, {"barcode": "2533", "upc": "8992772586030", "name": "Adem Sari Sparkling HL 320ml", "stock": 8, "price": 0}, {"barcode": "2531", "upc": "8992772586016", "name": "Adem sari herbal lemon 320ml", "stock": 8, "price": 0}, {"barcode": "376", "upc": "8995227500995", "name": "Kaki tiga anak 238ml leci", "stock": 7, "price": 0}, {"barcode": "7772", "upc": "0738989314015", "name": "Guinness 320ml", "stock": 13, "price": 0}, {"barcode": "3626", "upc": "8999908808905", "name": "Hemaviton C1000 Less Sugar 330ml", "stock": 3, "price": 0}, {"barcode": "9587", "upc": "8996006853127", "name": "Tebs sparkling mix fruit 330ml", "stock": 3, "price": 0}, {"barcode": "3629", "upc": "8999908442208", "name": "Polaris Soda Water 330ml", "stock": 14, "price": 0}, {"barcode": "13100", "upc": "8886002100007", "name": "Bali Hai 320ml", "stock": 1, "price": 0}, {"barcode": "7094", "upc": "8997206580455", "name": "Bir Bintang 500ml kaleng", "stock": 21, "price": 0}, {"barcode": "6151", "upc": "8997206580424", "name": "Bir Bintang 320ml kaleng", "stock": 34, "price": 0}, {"barcode": "1564", "upc": "8997206582084", "name": "Bir Bintang Anggur Merah 620ml", "stock": 13, "price": 0}, {"barcode": "10001", "upc": "8992756333445", "name": "Anker bir pilsener beer 620ml", "stock": 3, "price": 0}, {"barcode": "10038", "upc": "8997206580400", "name": "Bir Bintang 620ml", "stock": 14, "price": 0}, {"barcode": "3722", "upc": "8991102401135", "name": "Anggur Merah 275ml", "stock": 4, "price": 0}, {"barcode": "10281", "upc": "8997029981354", "name": "Sparkling Red Grape 750ml", "stock": 5, "price": 0}, {"barcode": "363", "upc": "8995227500261", "name": "Kaki tiga plain 500ml botol", "stock": 7, "price": 0}, {"barcode": "1346", "upc": "8995227503941", "name": "Kaki tiga plain 350 botol", "stock": 6, "price": 0}, {"barcode": "362", "upc": "8995227500124", "name": "Kaki tiga plain 200 botol", "stock": 5, "price": 0}, {"barcode": "379", "upc": "8995227500599", "name": "Panda klg 310ml sarang burung", "stock": 4, "price": 0}, {"barcode": "377", "upc": "8995227500377", "name": "Panda kaleng 310ml liang tea", "stock": 3, "price": 0}, {"barcode": "4231", "upc": "8992761002039", "name": "Fanta strawberry 390ml botol", "stock": 10, "price": 0}, {"barcode": "5752", "upc": "8992761145019", "name": "Coca Cola 250ml botol", "stock": 97, "price": 0}, {"barcode": "4241", "upc": "8992761145026", "name": "Sprite 250ml botol", "stock": 173, "price": 0}, {"barcode": "4232", "upc": "", "name": "Coca Cola 390ml botol", "stock": 3, "price": 0}, {"barcode": "4240", "upc": "8992761145033", "name": "Fanta strawberry 250ml botol", "stock": 150, "price": 0}, {"barcode": "4324", "upc": "8992726892514", "name": "Inaco IM Coco Mangga 350ml", "stock": 7, "price": 0}, {"barcode": "4323", "upc": "8992726892521", "name": "Inaco IM Coco Coconut 350ml", "stock": 8, "price": 0}, {"barcode": "425", "upc": "8992726892484", "name": "Inaco IM Coco Leci 350ml", "stock": 2, "price": 0}, {"barcode": "3187", "upc": "8809644083798", "name": "Pororo zero sugar straw 235ml", "stock": 5, "price": 0}, {"barcode": "3183", "upc": "8809644083804", "name": "Pororo Zero sugar apel 235ml", "stock": 2, "price": 0}, {"barcode": "459", "upc": "8998009020216", "name": "Buavita leychee 250ml", "stock": 2, "price": 0}, {"barcode": "460", "upc": "8998009020193", "name": "Buavita Mangga 250ml", "stock": 11, "price": 0}, {"barcode": "4382", "upc": "8998009020223", "name": "Buavita apple 250ml", "stock": 9, "price": 0}, {"barcode": "458", "upc": "8998009020186", "name": "Buavita Guava RL2 250ml", "stock": 28, "price": 0}, {"barcode": "13204", "upc": "8999999614768", "name": "Buavita Korea strawberry 250ml", "stock": 4, "price": 0}, {"barcode": "13205", "upc": "8999999614775", "name": "Buavita Korea muscat grape 250ml", "stock": 3, "price": 0}, {"barcode": "13265", "upc": "8996001601242", "name": "Teh pucuk harum 300ml", "stock": 4, "price": 0}, {"barcode": "6147", "upc": "8998009040313", "name": "Teh Kotak rasa Lemon 300ml", "stock": 10, "price": 0}, {"barcode": "449", "upc": "8998009040023", "name": "TEH KOTAK JASMINE 300ml", "stock": 185, "price": 0}, {"barcode": "2585", "upc": "8992802037020", "name": "Benecol orange 100ml", "stock": 14, "price": 0}, {"barcode": "4024", "upc": "8991102800020", "name": "Kiranti original 150ml", "stock": 23, "price": 0}, {"barcode": "5916", "upc": "8991102900607", "name": "Kiranti Orange 150ml", "stock": 10, "price": 0}, {"barcode": "4707", "upc": "8997009510017", "name": "You C1000 Lemon 140ml", "stock": 4, "price": 0}, {"barcode": "2384", "upc": "8997009510055", "name": "YOU C1000 orange 140ml", "stock": 162, "price": 0}, {"barcode": "4706", "upc": "8997009510130", "name": "You C1000 Apple 140ml", "stock": 8, "price": 0}, {"barcode": "9678", "upc": "8997009510369", "name": "You C1000 mango 140ml", "stock": 14, "price": 0}, {"barcode": "6176", "upc": "8998866202732", "name": "Milkku Strawberry 200ml", "stock": 16, "price": 0}, {"barcode": "6175", "upc": "8998866202725", "name": "Milkku Coklat 200ml", "stock": 9, "price": 0}, {"barcode": "3229", "upc": "8992702005976", "name": "Susu indomilk strawberry 190ml", "stock": 9, "price": 0}, {"barcode": "13602", "upc": "2005945", "name": "Indomilk cokelat 190ml", "stock": 1, "price": 0}, {"barcode": "6421", "upc": "8991002122017", "name": "ABC Kopi susu 200ml", "stock": 20, "price": 0}, {"barcode": "11081", "upc": "8998866202893", "name": "Golda Coffee Cappuccino 200ml", "stock": 16, "price": 0}, {"barcode": "3663", "upc": "8991002121089", "name": "Good Day Originale 250ml", "stock": 5, "price": 0}, {"barcode": "3662", "upc": "8991002121010", "name": "Good Day Funtastic Mocca 250ml", "stock": 8, "price": 0}, {"barcode": "4302", "upc": "8991002121065", "name": "Good Day Avocado 250ml btl", "stock": 6, "price": 0}, {"barcode": "4401", "upc": "8998866201841", "name": "Golda Coffee Dolce Latte 200ml", "stock": 17, "price": 0}, {"barcode": "13596", "upc": "66205658", "name": "Golda coffe aren latte 200ml", "stock": 1, "price": 0}, {"barcode": "2020", "upc": "9556001054005", "name": "Nescafe Mocha 240ml kaleng", "stock": 27, "price": 0}, {"barcode": "9603", "upc": "9556001295248", "name": "Nescafe Ice Black 220ml", "stock": 58, "price": 0}, {"barcode": "7550", "upc": "9556001288592", "name": "Nescafe latte strength 220ml", "stock": 11, "price": 0}, {"barcode": "3355", "upc": "9556001025272", "name": "Nescafe prelate intensity 240ml", "stock": 41, "price": 0}, {"barcode": "7889", "upc": "9556001288561", "name": "Nescafe Caramel macchiato 220ml", "stock": 53, "price": 0}, {"barcode": "7549", "upc": "9556001288547", "name": "Nescafe Cappuccino 220ml", "stock": 36, "price": 0}, {"barcode": "3764", "upc": "9556001047175", "name": "Nescafe Original 240ml", "stock": 10, "price": 0}, {"barcode": "74", "upc": "8992696526921", "name": "Milo Boostup choco 220 ml", "stock": 48, "price": 0}, {"barcode": "12853", "upc": "8996006852038", "name": "Air mineral prima 300ml", "stock": 27, "price": 0}, {"barcode": "3924", "upc": "8992982302208", "name": "Air Vica Aqua 220ml botol", "stock": 23, "price": 0}, {"barcode": "3304", "upc": "8992982203307", "name": "Air M Nestle Pure Life 330ml", "stock": 293, "price": 0}, {"barcode": "2436", "upc": "88860008101336", "name": "Air Mineral Aqua botol 330ml", "stock": 51, "price": 0}];
+const STORAGE_KEY='diho_barang';
+let barang;
+try {
+ const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+ barang=Array.isArray(saved)&&saved.length?saved:DATA_AWAL.map(x=>({...x}));
+} catch(e) { barang=DATA_AWAL.map(x=>({...x})); }
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(barang))}catch(e){alert('Penyimpanan perangkat penuh atau diblokir. Ekspor data secara berkala.')} }
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+ const q=$('search').value.trim().toLowerCase();
+ const filtered=barang.filter(p=>[p.name,p.barcode,p.upc].some(v=>String(v??'').toLowerCase().includes(q)));
+ $('totalItems').textContent=barang.length;
+ $('totalUnits').textContent=barang.reduce((s,p)=>s+(Number(p.stock)||0),0);
+ $('shownItems').textContent=filtered.length;
+ $('items').innerHTML=filtered.map((p)=>`<tr><td><div class="product-name">${esc(p.name)}</div></td><td>${esc(p.barcode||'—')}</td><td>${esc(p.upc||'—')}</td><td><b>${Number(p.stock)||0}</b></td><td><div class="row"><button class="secondary" data-act="minus" data-code="${esc(p.barcode)}">−1</button><button data-act="plus" data-code="${esc(p.barcode)}">+1</button></div></td></tr>`).join('');
+ $('empty').classList.toggle('hidden',filtered.length!==0);
 }
-function isiForm(b){
- document.getElementById('nama').value=b.nama||'';
- document.getElementById('upc').value=b.upc||'';
- document.getElementById('kode').value=b.kode||'';
- if(b.gambar) tampilGambarProduk(b.gambar,b.nama);
- else if(b.upc) cariGambarUPC(b.upc,b.nama);
- else tampilGambarProduk('',b.nama);
+function findItem(code){let c=String(code||'').trim();return barang.find(p=>String(p.barcode||'').trim()===c||String(p.upc||'').trim()===c)}
+function showMatch(code){
+ const p=findItem(code);const box=$('match');box.classList.remove('hidden');
+ if(!p){box.textContent='Kode '+code+' belum ada dalam daftar. Coba cari nama barang atau periksa kode pada label.';return}
+ box.innerHTML='<b>'+esc(p.name)+'</b><br>Barcode: '+esc(p.barcode||'—')+' · UPC: '+esc(p.upc||'—')+'<br>Stok tersedia: <b>'+Number(p.stock||0)+'</b>';
+ $('search').value=String(code);render();
 }
-function tambah(){
- const nama=document.getElementById('nama').value.trim(),upc=document.getElementById('upc').value.trim(),kode=document.getElementById('kode').value.trim();
- const stok=Number(document.getElementById('stok').value),harga=Number(document.getElementById('harga').value);
- if(!nama)return alert('Isi nama barang');if(!upc)return alert('Isi atau scan UPC');if(!kode)return alert('Isi barcode internal, misalnya 473');
- if(!Number.isInteger(stok)||stok<0)return alert('Stok awal harus angka bulat 0 atau lebih');if(!Number.isFinite(harga)||harga<0)return alert('Isi harga jual yang benar');
- if(barang.some(b=>b.upc===upc||b.kode===kode))return alert('UPC atau barcode internal sudah digunakan barang lain');
- barang.push({id:Date.now(),nama,upc,kode,stok,harga,gambar:document.getElementById('gambarProduk').hidden?'':document.getElementById('gambarProduk').src});simpan();tampil();alert('Barang tersimpan');
- ['nama','upc','kode','stok','harga'].forEach(id=>document.getElementById(id).value='');tampilGambarProduk('');setStatus('Barang tersimpan. UPC dan barcode internal disimpan terpisah.');
-}
-function tampil(){
- const q=document.getElementById('filter').value.toLowerCase();
- const list=barang.filter(b=>(b.nama+' '+b.upc+' '+b.kode).toLowerCase().includes(q));
- document.getElementById('daftar').innerHTML=list.map(b=>'<tr><td>'+aman(b.nama)+'<br><small>UPC: '+aman(b.upc||'—')+'<br>Barcode: '+aman(b.kode||'—')+'</small></td><td>'+Number(b.stok||0)+'</td><td>'+rupiah(b.harga)+'</td><td><button class="danger" onclick="hapus('+Number(b.id)+')">Hapus</button></td></tr>').join('');
- document.getElementById('jumlah').textContent='Jenis barang: '+barang.length+' | Total stok: '+barang.reduce((a,b)=>a+Number(b.stok||0),0);
- ['pilih','jual'].forEach(id=>{const el=document.getElementById(id),old=el.value;el.innerHTML=barang.map(b=>'<option value="'+Number(b.id)+'">'+aman(b.nama)+' — stok '+Number(b.stok||0)+'</option>').join('');if(barang.some(b=>String(b.id)===old))el.value=old});
-}
-function hapus(id){if(confirm('Hapus barang ini?')){barang=barang.filter(b=>b.id!==id);simpan();tampil()}}
-function cariBarang(){
- const k=document.getElementById('cari').value.trim(),b=cariKode(k),hasil=document.getElementById('hasil');
- if(!b){hasil.textContent='Kode belum ditemukan di data DIHO. Jika memasukkan UPC baru, gunakan Cari Nama dari UPC lalu simpan barang.';return}
- hasil.textContent='Ditemukan: '+b.nama+' | UPC: '+(b.upc||'—')+' | Barcode internal: '+(b.kode||'—')+' | Stok: '+b.stok+' | '+rupiah(b.harga);
-}
-function scanKePencarian(){document.getElementById('upc').focus();setStatus('Gunakan tombol Scan UPC dengan Kamera di bagian Tambah Barang untuk memindai UPC. Setelah terbaca, salin UPC ke kolom pencarian jika ingin mencari.')}
-async function cariGambarUPC(k, namaFallback=''){
- k=String(k||'').trim();
- if(!k){tampilGambarProduk('');return null}
- try{
-  const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(k)+'.json');
-  if(!res.ok)throw new Error('request gagal');
-  const data=await res.json(),p=data.status===1&&data.product;
-  if(!p){tampilGambarProduk('',namaFallback);return null}
-  const candidates=[
-   p.image_front_url,p.image_front_small_url,p.image_front_thumb_url,
-   p.selected_images&&p.selected_images.front&&p.selected_images.front.display&&p.selected_images.front.display.en,
-   p.selected_images&&p.selected_images.front&&p.selected_images.front.display&&p.selected_images.front.display.id,
-   p.image_url,p.image_small_url
-  ].filter(Boolean);
-  if(candidates.length)tampilGambarProduk(candidates[0],p.product_name_id||p.product_name||p.product_name_en||namaFallback);
-  else tampilGambarProduk('',namaFallback);
-  return p;
- }catch(e){tampilGambarProduk('',namaFallback);return null}
-}
-async function cariNamaProduk(){
- const k=document.getElementById('upc').value.trim();if(!k){setStatus('Isi atau scan UPC terlebih dahulu.');return}
- const local=cariKode(k);
- if(local){
-  isiForm(local);
-  setStatus('Ditemukan di data DIHO: '+local.nama+'. UPC: '+local.upc+'. Barcode internal: '+local.kode+'.');
-  return;
- }
- setStatus('Mencari nama dan gambar depan produk berdasarkan UPC '+k+'…');
- try{
-  const res=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(k)+'.json');
-  if(!res.ok)throw new Error('request gagal');
-  const data=await res.json(),p=data.status===1&&data.product;
-  const name=p&&(p.product_name_id||p.product_name||p.product_name_en);
-  const gambar=p&&(p.image_front_url||p.image_front_small_url||p.image_front_thumb_url||
-   (p.selected_images&&p.selected_images.front&&p.selected_images.front.display&&(p.selected_images.front.display.en||p.selected_images.front.display.id))||
-   p.image_url||p.image_small_url)||'';
-  if(name)document.getElementById('nama').value=name;
-  tampilGambarProduk(gambar,name||'');
-  if(name||gambar){
-   setStatus((name?'Nama ditemukan: '+name+'. ':'')+(gambar?'Gambar depan produk ditampilkan. ':'Foto belum tersedia untuk UPC ini. ')+'Periksa nama, lalu isi barcode internal, stok, dan harga.');
-  }else setStatus('UPC tidak ditemukan online atau belum ada gambar. Isi nama barang manual; gambar depan bisa tidak tersedia untuk semua produk.');
- }catch(e){
-  tampilGambarProduk('');
-  setStatus('Pencarian online gagal. Periksa internet atau isi nama barang manual.');
- }
-}
-document.getElementById('upc').addEventListener('change',function(){if(this.value.trim())cariGambarUPC(this.value.trim(),document.getElementById('nama').value.trim())});
-document.getElementById('upc').addEventListener('blur',function(){if(this.value.trim())cariGambarUPC(this.value.trim(),document.getElementById('nama').value.trim())});
-document.getElementById('kode').addEventListener('change',function(){
- const b=cariKode(this.value.trim());
- if(b){if(b.gambar)tampilGambarProduk(b.gambar,b.nama);else if(b.upc)cariGambarUPC(b.upc,b.nama);}
+$('search').addEventListener('input',()=>{render();$('match').classList.add('hidden')});
+$('items').addEventListener('click',e=>{
+ const b=e.target.closest('button[data-act]');if(!b)return;
+ const p=barang.find(x=>String(x.barcode)===b.dataset.code);if(!p)return;
+ p.stock=Math.max(0,(Number(p.stock)||0)+(b.dataset.act==='plus'?1:-1));save();render();
 });
-
-async function fotoScan(file){
- if(!('BarcodeDetector'in window)){setStatus('Browser belum mendukung scan foto. Gunakan Scan UPC dengan Kamera atau isi UPC manual.');return}
- try{const supported=await BarcodeDetector.getSupportedFormats(),formats=['upc_a','upc_e','ean_13','ean_8'].filter(f=>supported.includes(f)),det=new BarcodeDetector(formats.length?{formats}:undefined),img=await createImageBitmap(file),codes=await det.detect(img);img.close();if(!codes.length){setStatus('UPC belum terbaca. Coba foto lebih dekat dan terang.');return}await terimaUPC(codes[0].rawValue)}catch(e){setStatus('Foto gagal dipindai. Coba scan dengan kamera langsung.')}
-}
-document.getElementById('foto').addEventListener('change',function(){if(this.files&&this.files[0])fotoScan(this.files[0]);this.value=''});
-
-document.getElementById('fotoProdukManual').addEventListener('change',function(){
- const file=this.files&&this.files[0];
- if(!file){return}
- if(!file.type.startsWith('image/')){alert('Pilih file gambar.');this.value='';return}
- const reader=new FileReader();
- reader.onload=function(){
-  const img=new Image();
-  img.onload=function(){
-   // Resize image before storing so localStorage is less likely to fill up.
-   const canvas=document.createElement('canvas');
-   const max=900,scale=Math.min(1,max/Math.max(img.width,img.height));
-   canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
-   const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,canvas.width,canvas.height);
-   const data=canvas.toDataURL('image/jpeg',0.78);
-   tampilGambarProduk(data,document.getElementById('nama').value.trim());
-   setStatus('Foto produk dipilih. Isi data barang lalu tekan Simpan Barang agar foto tersimpan bersama barang.');
-  };
-  img.onerror=function(){setStatus('Foto tidak bisa dibuka. Coba pilih gambar lain.');};
-  img.src=reader.result;
- };
- reader.onerror=function(){setStatus('Gagal membaca foto. Coba lagi.');};
- reader.readAsDataURL(file);
- this.value='';
+$('resetBtn').addEventListener('click',()=>{if(confirm('Kembalikan daftar ke 106 data awal? Perubahan lokal pada stok akan hilang.')){barang=DATA_AWAL.map(x=>({...x}));save();render();}});
+$('exportBtn').addEventListener('click',()=>{
+ const rows=[['barcode_internal','UPC','nama_barang','stok','harga'],...barang.map(p=>[p.barcode,p.upc,p.name,p.stock,p.price||0])];
+ const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='DIHO_data_barang.csv';a.click();URL.revokeObjectURL(a.href);
 });
-
-let audioCtxDIHO=null;
-function bunyiTit(){
+let stream=null,detector=null,scanLoop=false;
+$('scanBtn').addEventListener('click',startScan);$('stopBtn').addEventListener('click',stopScan);
+async function startScan(){
+ $('scanArea').classList.remove('hidden');$('scanMessage').textContent='';
+ if(!('BarcodeDetector' in window)){ $('scanMessage').textContent='Browser ini belum mendukung pemindai kamera otomatis. Ketik atau tempel kode ke kotak pencarian.';return;}
  try{
-  const AudioCtx=window.AudioContext||window.webkitAudioContext;
-  if(!AudioCtx)return;
-  if(!audioCtxDIHO)audioCtxDIHO=new AudioCtx();
-  const play=()=>{
-   const ctx=audioCtxDIHO;
-   const osc=ctx.createOscillator();
-   const gain=ctx.createGain();
-   osc.type='sine';
-   osc.frequency.setValueAtTime(1150,ctx.currentTime);
-   gain.gain.setValueAtTime(0.0001,ctx.currentTime);
-   gain.gain.exponentialRampToValueAtTime(0.22,ctx.currentTime+0.015);
-   gain.gain.setValueAtTime(0.22,ctx.currentTime+0.07);
-   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+0.18);
-   osc.connect(gain);gain.connect(ctx.destination);
-   osc.start(ctx.currentTime);osc.stop(ctx.currentTime+0.19);
-  };
-  if(audioCtxDIHO.state==='suspended'){
-   audioCtxDIHO.resume().then(play).catch(()=>{});
-  }else play();
- }catch(e){}
+  detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+  $('video').srcObject=stream;await $('video').play();scanLoop=true;scanFrame();
+ }catch(e){$('scanMessage').textContent='Kamera tidak dapat dibuka. Izinkan akses kamera dan gunakan halaman HTTPS.'}
 }
-function aktifkanAudioDIHO(){
- try{
-  const AudioCtx=window.AudioContext||window.webkitAudioContext;
-  if(AudioCtx&&!audioCtxDIHO)audioCtxDIHO=new AudioCtx();
-  if(audioCtxDIHO&&audioCtxDIHO.state==='suspended')audioCtxDIHO.resume().catch(()=>{});
- }catch(e){}
+async function scanFrame(){
+ if(!scanLoop||!stream)return;
+ try{const codes=await detector.detect($('video'));if(codes.length){const val=codes[0].rawValue;stopScan();showMatch(val);return;}}catch(e){}
+ requestAnimationFrame(scanFrame);
 }
-document.addEventListener('pointerdown',aktifkanAudioDIHO,{once:true});
-async function terimaUPC(code){
- bunyiTit();
- document.getElementById('upc').value=code;setStatus('UPC terbaca: '+code+'. Mencari data barang dan gambar depan…');
- const b=cariKode(code);
- if(b){isiForm(b);setStatus('Barang ditemukan: '+b.nama+'. UPC diisi otomatis; barcode internal: '+(b.kode||'—')+'.')}
- else await cariNamaProduk();
-}
-async function kamera(){
- if(!('BarcodeDetector'in window))return alert('Browser belum mendukung scan barcode otomatis. Coba Chrome terbaru atau isi UPC manual.');
- if(!navigator.mediaDevices?.getUserMedia)return alert('Kamera memerlukan HTTPS dan izin kamera.');
- try{let formats=['upc_a','upc_e','ean_13','ean_8'];const supported=await BarcodeDetector.getSupportedFormats();formats=formats.filter(f=>supported.includes(f));const det=new BarcodeDetector(formats.length?{formats}:undefined);
- stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});const v=document.getElementById('video');v.hidden=false;v.srcObject=stream;await v.play();document.getElementById('stopCamera').hidden=false;scanAktif=true;setStatus('Arahkan kamera ke UPC pabrik. Barcode internal tidak akan diubah.');
- async function scan(){if(!scanAktif||!stream)return;try{const r=await det.detect(v);if(r.length){const code=r[0].rawValue;stopKamera();await terimaUPC(code);return}}catch(e){}if(scanAktif)requestAnimationFrame(scan)}scan()
- }catch(e){stopKamera();alert('Kamera gagal dibuka. Izinkan akses kamera dan gunakan HTTPS.')}
-}
-function stopKamera(){scanAktif=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}const v=document.getElementById('video');v.pause();v.srcObject=null;v.hidden=true;document.getElementById('stopCamera').hidden=true}
-function ubah(t){const b=barang.find(x=>x.id==document.getElementById('pilih').value),n=Number(document.getElementById('jumlahUbah').value);if(!b||!Number.isInteger(n)||n<1)return alert('Isi jumlah yang benar');if(t<0&&b.stok<n)return alert('Stok tidak cukup');b.stok+=t*n;simpan();tampil();alert('Stok diperbarui')}
-function transaksi(){const b=barang.find(x=>x.id==document.getElementById('jual').value),n=Number(document.getElementById('jumlahJual').value);if(!b||!Number.isInteger(n)||n<1)return alert('Isi jumlah yang benar');if(b.stok<n)return alert('Stok tidak cukup');b.stok-=n;simpan();tampil();document.getElementById('nota').textContent='Barang: '+b.nama+' | Qty: '+n+' | Total: '+rupiah(n*b.harga)}
-tampil();
+function stopScan(){scanLoop=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('video').srcObject=null;$('scanArea').classList.add('hidden')}
+render();
 </script>
-</body>
-</html>
+</body></html>
