@@ -21,36 +21,70 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 6px;t
 #reader{width:100%;max-width:440px;margin-top:10px}video{width:100%;border-radius:10px}
 .product-name{font-weight:700}.codes{font-size:12px;color:#526158;overflow-wrap:anywhere}
 .hidden{display:none!important}.notice{background:#fff7d8;padding:10px;border-radius:8px;font-size:13px}
+.form-group{margin-bottom:10px}.form-group label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:#33443c}
 @media(max-width:520px){.stats{grid-template-columns:1fr 1fr}.stat:last-child{grid-column:span 2}th,td{padding:8px 4px}}
 </style>
 </head>
 <body>
-<header><h1>DIHO Kasir & Stok Barang</h1><p>Daftar barang · pencarian UPC/barcode · pemindai kamera</p></header>
+<header><h1>DIHO Kasir & Stok Barang</h1><p>Daftar barang · pencarian manual & kamera · tambah barang baru</p></header>
 <main>
 <section class="card">
 <h2>Ringkasan stok</h2><div class="stats">
 <div class="stat"><b id="totalItems">0</b><span>Nama barang</span></div>
-<div class="stat"><b id="totalUnits">0</b><span>Total stok awal</span></div>
+<div class="stat"><b id="totalUnits">0</b><span>Total stok keseluruhan</span></div>
 <div class="stat"><b id="shownItems">0</b><span>Hasil pencarian</span></div>
 </div>
 </section>
+
 <section class="card">
 <h2>Cari atau pindai barang</h2>
-<div class="row"><input id="search" class="search" placeholder="Ketik nama, UPC, atau barcode…" autocomplete="off"><button id="scanBtn">📷 Pindai</button></div>
+<div class="row">
+  <input id="search" class="search" placeholder="Ketik nama, UPC, atau barcode…" autocomplete="off">
+  <button id="searchBtn" class="secondary">Cari</button>
+  <button id="scanBtn">📷 Pindai</button>
+</div>
 <div id="scanArea" class="hidden"><p class="muted">Arahkan barcode ke kamera. Izinkan akses kamera jika diminta.</p><video id="video" playsinline></video><div class="row" style="margin-top:8px"><button id="stopBtn" class="secondary">Tutup kamera</button></div><p id="scanMessage" class="muted"></p></div>
 <div id="match" class="notice hidden" style="margin-top:10px"></div>
 </section>
+
+<section class="card">
+<h2>Tambah Barang Baru (Manual)</h2>
+<form id="formAdd">
+  <div class="row">
+    <div style="flex:2;min-width:200px" class="form-group">
+      <label>Nama Barang *</label>
+      <input id="addName" placeholder="Contoh: Indomie Goreng" required autocomplete="off">
+    </div>
+    <div style="flex:1;min-width:130px" class="form-group">
+      <label>Barcode Internal</label>
+      <input id="addBarcode" placeholder="Contoh: 14001" autocomplete="off">
+    </div>
+    <div style="flex:1;min-width:130px" class="form-group">
+      <label>UPC / Barcode Pabrik</label>
+      <input id="addUpc" placeholder="Contoh: 899..." autocomplete="off">
+    </div>
+    <div style="flex:80px;min-width:80px" class="form-group">
+      <label>Stok Awal</label>
+      <input id="addStock" type="number" value="1" min="0">
+    </div>
+  </div>
+  <button type="submit" style="margin-top:4px">+ Simpan Barang Baru</button>
+</form>
+</section>
+
 <section class="card">
 <h2>Daftar barang</h2>
-<p class="muted">Stok awal diperbarui dengan data laporan terbaru (termasuk Rak Kosmetik Puput). Perubahan stok disimpan di perangkat ini.</p>
+<p class="muted">Perubahan stok dan penambahan barang baru disimpan secara otomatis di perangkat ini.</p>
 <div class="tablewrap"><table><thead><tr><th>Barang</th><th>Barcode</th><th>UPC</th><th>Stok</th><th>Aksi</th></tr></thead><tbody id="items"></tbody></table></div>
 <p id="empty" class="muted hidden">Barang tidak ditemukan.</p>
 <div class="row" style="margin-top:12px"><button id="exportBtn" class="secondary">Ekspor CSV</button><button id="resetBtn" class="danger">Reset ke data awal</button></div>
 </section>
+
 <section class="card">
-<h2>Catatan</h2><p class="muted">Nomor barcode internal dan UPC disimpan sebagai teks agar angka nol di depan tidak hilang. Pemindaian kamera memerlukan browser yang mendukung BarcodeDetector dan koneksi HTTPS.</p>
+<h2>Catatan</h2><p class="muted">Nomor barcode internal dan UPC disimpan sebagai teks agar angka nol di depan tidak hilang.</p>
 </section>
 </main>
+
 <script>
 const DATA_AWAL = [
   {"barcode": "12741", "upc": "8993007000239", "name": "Susu indomilk kids cokelat 115ml", "stock": 19, "price": 0},
@@ -158,382 +192,7 @@ const DATA_AWAL = [
   {"barcode": "12853", "upc": "8996006852038", "name": "Air mineral prima 300ml", "stock": 27, "price": 0},
   {"barcode": "3924", "upc": "8992982302208", "name": "Air Vica Aqua 220ml botol", "stock": 23, "price": 0},
   {"barcode": "3304", "upc": "8992982203307", "name": "Air M Nestle Pure Life 330ml", "stock": 293, "price": 0},
-  {"barcode": "2436", "upc": "88860008101336", "name": "Air Mineral Aqua botol 330ml", "stock": 51, "price": 0},
-  // Data Rak Sabun Pouch & Botol (OKM)
-  {"barcode": "13232", "upc": "8999999616328", "name": "Lifebuoy fifa menthol kick 85gr", "stock": 4, "price": 0},
-  {"barcode": "649", "upc": "899999001216", "name": "Lifebuoy coolfresh 100ml", "stock": 2, "price": 0},
-  {"barcode": "4343", "upc": "899999001230", "name": "LifeBoy total 10 100ml", "stock": 4, "price": 0},
-  {"barcode": "648", "upc": "899999001247", "name": "Lifebuoy mild care 100ml", "stock": 3, "price": 0},
-  {"barcode": "65", "upc": "8886012001028", "name": "Toilet Ball Fresh Fruity 5's", "stock": 4, "price": 0},
-  {"barcode": "3406", "upc": "8993560026424", "name": "dettol body wash fresh 100ml", "stock": 7, "price": 0},
-  {"barcode": "1257", "upc": "8992727000543", "name": "Biore active antibacterial 100m", "stock": 5, "price": 0},
-  {"barcode": "1253", "upc": "8992727001656", "name": "Biore bright white scrub 100ml", "stock": 3, "price": 0},
-  {"barcode": "1261", "upc": "8992727003858", "name": "Biore lively refresh 100ml", "stock": 2, "price": 0},
-  {"barcode": "1262", "upc": "8992727003865", "name": "Biore lively refresh 250ml", "stock": 2, "price": 0},
-  {"barcode": "1219", "upc": "8992727000383", "name": "Biore BF pure mild 100ml", "stock": 7, "price": 0},
-  {"barcode": "1220", "upc": "8992727000390", "name": "Biore BF pure mild 250ml botol", "stock": 4, "price": 0},
-  {"barcode": "1221", "upc": "8992727002561", "name": "Biore relaxing aromatic 100ml B", "stock": 2, "price": 0},
-  {"barcode": "1222", "upc": "8992727002585", "name": "Biore relaxing aromatic 250ml B", "stock": 4, "price": 0},
-  {"barcode": "5728", "upc": "899999009601", "name": "Lifeboy Total 10 500ml Btl (Pum", "stock": 2, "price": 0},
-  {"barcode": "4691", "upc": "8992946522277", "name": "Shinzui Kenso Body Cleanse180ml", "stock": 1, "price": 0},
-  {"barcode": "4694", "upc": "8992946518799", "name": "Shinzui Matsu Body Cleanse200ml", "stock": 2, "price": 0},
-  {"barcode": "4684", "upc": "8992946523526", "name": "Shinzui Hana Body Cleanse420ml", "stock": 2, "price": 0},
-  {"barcode": "4686", "upc": "8992946523533", "name": "Shinzui Kirei Body Cleanse380ml", "stock": 2, "price": 0},
-  {"barcode": "4688", "upc": "8992946523519", "name": "Shinzui Matsu Body Cleanse380ml", "stock": 1, "price": 0},
-  {"barcode": "1737", "upc": "8998866602983", "name": "Nuvo Family Hijau Pouch 250ml", "stock": 1, "price": 0},
-  {"barcode": "1742", "upc": "8998866609746", "name": "Nuvo Family Hijau Pouch 450ml", "stock": 4, "price": 0},
-  {"barcode": "1738", "upc": "8998866602976", "name": "Nuvo Family Total protect250ml", "stock": 4, "price": 0},
-  {"barcode": "1743", "upc": "8998866609739", "name": "Nuvo Family Total Protect450ml", "stock": 1, "price": 0},
-  {"barcode": "1745", "upc": "8998866609722", "name": "Nuvo Family Putih Pouch 400ML", "stock": 1, "price": 0},
-  {"barcode": "13063", "upc": "899999606831", "name": "Dove serum BW pamperingcare 400", "stock": 3, "price": 0},
-  {"barcode": "637", "upc": "0", "name": "Lifebuoy total 10 400ml/380ml", "stock": 3, "price": 0},
-  {"barcode": "4378", "upc": "8999995559526", "name": "LifeBoy Yoghurt Care 450ml reff", "stock": 1, "price": 0},
-  {"barcode": "13033", "upc": "899999615901", "name": "Lifebuoy BW cool fresh 380gr", "stock": 3, "price": 0},
-  {"barcode": "9009", "upc": "899999574963", "name": "Lifebuoy BW Shiso&Mineral C 450m", "stock": 4, "price": 0},
-  {"barcode": "9012", "upc": "899999574994", "name": "Lifebuoy BW Shiso&Mineral C 800m", "stock": 3, "price": 0},
-  {"barcode": "633", "upc": "899999515607", "name": "Lifebuoy Mild care 825ml", "stock": 3, "price": 0},
-  {"barcode": "13215", "upc": "899999615895", "name": "Lifebuoy lemon fresh 380ml", "stock": 2, "price": 0},
-  {"barcode": "632", "upc": "899999515621", "name": "Lifebuoy lemonfresh 825ml", "stock": 2, "price": 0},
-  {"barcode": "639", "upc": "899999027261", "name": "Lifebuoy lemon fresh 400ML", "stock": 1, "price": 0},
-  {"barcode": "13034", "upc": "899999615888", "name": "Lifebuoy BW mild care 380gr", "stock": 6, "price": 0},
-  {"barcode": "4693", "upc": "8992946522253", "name": "Shinzui Myori Body Cleanse180ml", "stock": 4, "price": 0},
-  // Data STOK HARIAN OK 2 (Deterjen & Pembersih Pakaian)
-  {"barcode": "1246", "upc": "8992727002479", "name": "Attack plus softener 750gr", "stock": 3, "price": 0},
-  {"barcode": "1843", "upc": "8998866605809", "name": "soklin dertergent white 725gr", "stock": 2, "price": 0},
-  {"barcode": "1842", "upc": "8998866805414", "name": "soklin softener smart 725gr", "stock": 2, "price": 0},
-  {"barcode": "1834", "upc": "8998866607315", "name": "Soklin Softergent Pink 770 gr", "stock": 1, "price": 0},
-  {"barcode": "9953", "upc": "8998866612517", "name": "Soklin freesia peony 720gr", "stock": 2, "price": 0},
-  {"barcode": "4769", "upc": "8998866808231", "name": "SoKlin Softergent RosyPink 425g", "stock": 4, "price": 0},
-  {"barcode": "6825", "upc": "8998866618298", "name": "Daia Clean&Fresh Hijab 245g/190", "stock": 3, "price": 0},
-  {"barcode": "1847", "upc": "8998866601429", "name": "Daia bunga 245gr/190gr", "stock": 4, "price": 0},
-  {"barcode": "1848", "upc": "8998866610261", "name": "Daia detergen violet 245gr/190g", "stock": 4, "price": 0},
-  {"barcode": "1844", "upc": "8998866608718", "name": "Daia detergen pink 245gr", "stock": 4, "price": 0},
-  {"barcode": "13441", "upc": "8998866609043", "name": "Daia softener romantic pink 495", "stock": 6, "price": 0},
-  {"barcode": "1845", "upc": "8998866604963", "name": "Daia detergen lemon 245gr", "stock": 3, "price": 0},
-  {"barcode": "6796", "upc": "8998866609050", "name": "Daia Lemon 470gr", "stock": 4, "price": 0},
-  {"barcode": "1853", "upc": "8998866610223", "name": "Daia deterjen soft violet 800gr", "stock": 4, "price": 0},
-  {"barcode": "1850", "upc": "8998866604932", "name": "Daia deterjen lemon 800gr/725gr", "stock": 3, "price": 0},
-  {"barcode": "1852", "upc": "8998866608725", "name": "Daia deterjen soft pink 800gr", "stock": 2, "price": 0},
-  {"barcode": "1849", "upc": "8998866601436", "name": "Daia deterjen bunga 800gr/725gr", "stock": 3, "price": 0},
-  {"barcode": "1851", "upc": "8998866607353", "name": "Daia deterjen putih 800gr/725gr", "stock": 2, "price": 0},
-  {"barcode": "4396", "upc": "8992727005975", "name": "Jaz 1 Semerbak Cinta 1500gr", "stock": 2, "price": 0},
-  {"barcode": "4395", "upc": "8992727005982", "name": "Jaz 1 Pesona segar 1500gr", "stock": 3, "price": 0},
-  {"barcode": "1295", "upc": "8992727005289", "name": "JAZ 1 semerbak cinta 800gr", "stock": 3, "price": 0},
-  {"barcode": "1296", "upc": "8992727005302", "name": "JAZ 1 pesona segar 800gr", "stock": 1, "price": 0},
-  {"barcode": "9743", "upc": "8992727008938", "name": "Jaz 1 attack softener 750gr/650", "stock": 2, "price": 0},
-  {"barcode": "1271", "upc": "8992727003070", "name": "Attack easy purple blossom 700g", "stock": 1, "price": 0},
-  {"barcode": "10451", "upc": "8992727009546", "name": "Jaz 1 attack softener 425gr", "stock": 4, "price": 0},
-  // Data Rak Snack (Katarina Part 1)
-  {"barcode": "10545", "upc": "8886013402206", "name": "Twisko jagungbakar 30gr", "stock": 6, "price": 0},
-  {"barcode": "10479", "upc": "8886013221203", "name": "Twistko roasted corn 70gr", "stock": 3, "price": 0},
-  {"barcode": "1076", "upc": "8994834007354", "name": "French Fries Level 03", "stock": 2, "price": 0},
-  {"barcode": "9791", "upc": "8886013223207", "name": "French fries premium 62g", "stock": 4, "price": 0},
-  {"barcode": "1979", "upc": "8998866201711", "name": "krisbee kruncy jagung bakar75gr", "stock": 7, "price": 0},
-  {"barcode": "929", "upc": "8995077606922", "name": "Roni Macaroni Spicy 140 gr", "stock": 3, "price": 0},
-  {"barcode": "1975", "upc": "8998866201469", "name": "potabee bbq beef 68gr", "stock": 9, "price": 0},
-  {"barcode": "1977", "upc": "8998866201728", "name": "potabee salted egg 68gr", "stock": 6, "price": 0},
-  {"barcode": "3874", "upc": "8998866201490", "name": "Potabee Grilled Seaweed 68gr", "stock": 2, "price": 0},
-  {"barcode": "7730", "upc": "8998866202978", "name": "GuriBee Rumput Laut 65gr", "stock": 2, "price": 0},
-  {"barcode": "7850", "upc": "8998866202954", "name": "Guribee BBQ Balado 68gr", "stock": 4, "price": 0},
-  {"barcode": "11185", "upc": "8998866203838", "name": "Guribee Keju 65gr", "stock": 4, "price": 0},
-  {"barcode": "11082", "upc": "8998866203494", "name": "Japota smbl bawang/jeruk n 68gr", "stock": 6, "price": 0},
-  {"barcode": "2400", "upc": "8998866202473", "name": "Japota Honey Butter 68gr", "stock": 6, "price": 0},
-  {"barcode": "6155", "upc": "8998866202459", "name": "Japota Umami Japanese Seaweed", "stock": 4, "price": 0},
-  {"barcode": "2725", "upc": "8995077606496", "name": "TOS TOS Tortila Chips BBQ 145g", "stock": 5, "price": 0},
-  {"barcode": "2645", "upc": "8995077606489", "name": "Tos NachoTortila keju 145g", "stock": 3, "price": 0},
-  {"barcode": "2644", "upc": "8995077606472", "name": "TOS TOS Tortila Chips Corn 145g", "stock": 3, "price": 0},
-  {"barcode": "2646", "upc": "8993027164034", "name": "Happy tos Tortila JB 140g", "stock": 3, "price": 0},
-  {"barcode": "2461", "upc": "8993027111601", "name": "Happy tos Corn Chips 160g", "stock": 7, "price": 0},
-  {"barcode": "2449", "upc": "0089686611649", "name": "Qtela singkong Barbeque 180gr", "stock": 1, "price": 0},
-  {"barcode": "7341", "upc": "0089686611540", "name": "Qtela Rasa Original 180gr", "stock": 3, "price": 0},
-  {"barcode": "2485", "upc": "0089686611519", "name": "Qtela singkong original 60g", "stock": 4, "price": 0},
-  {"barcode": "8375", "upc": "0089686611908", "name": "Qtela Tempe Cabai Original 55gr", "stock": 6, "price": 0},
-  {"barcode": "7112", "upc": "0089686611670", "name": "Qtela Balado 60gr", "stock": 3, "price": 0},
-  {"barcode": "12579", "upc": "0089686611601", "name": "Qtela barbeque 20gr", "stock": 10, "price": 0},
-  {"barcode": "13171", "upc": "", "name": "Qtela balado 20gr", "stock": 11, "price": 0},
-  {"barcode": "5336", "upc": "0089686598353", "name": "Chitato original 68gr", "stock": 2, "price": 0},
-  {"barcode": "9432", "upc": "8995102708164", "name": "Mamasuka rumput laut Pedas 4.5g", "stock": 78, "price": 0},
-  // Data Rak Kasir (Louisa)
-  {"barcode": "10795", "upc": "8990800021379", "name": "Alpenlibe lolipop strawberry", "stock": 21, "price": 0},
-  {"barcode": "10933", "upc": "8990800021362", "name": "Alpenlibe lolipop karamel 10.5g", "stock": 7, "price": 0},
-  {"barcode": "11258", "upc": "8997878001944", "name": "Jagoan Neon Strobery 6gr", "stock": 2, "price": 0},
-  {"barcode": "11257", "upc": "8997878701554", "name": "Jagoan Neon Anggur", "stock": 5, "price": 0},
-  {"barcode": "12543", "upc": "8997878702018", "name": "Milkita lolipop all varian 9gr", "stock": 36, "price": 0},
-  {"barcode": "6982", "upc": "8999809700025", "name": "Vicee Rasa Lemon", "stock": 10, "price": 0},
-  {"barcode": "6843", "upc": "8999809700056", "name": "Vicee rasa Anggur", "stock": 20, "price": 0},
-  {"barcode": "6844", "upc": "8999809700032", "name": "Vicee rasa jeruk", "stock": 10, "price": 0},
-  {"barcode": "9321", "upc": "8992858690200", "name": "xonce tab vit c-500mg", "stock": 4, "price": 0},
-  {"barcode": "2569", "upc": "8993564101905", "name": "Gofress pepermint 35.19mg", "stock": 2, "price": 0},
-  {"barcode": "6059", "upc": "8997009070177", "name": "Gofress Strawbery", "stock": 2, "price": 0},
-  {"barcode": "7373", "upc": "0", "name": "Permen Winston 18gr", "stock": 4, "price": 0},
-  {"barcode": "11560", "upc": "8991115012106", "name": "Big Babol stroberi chupa 20'gr", "stock": 9, "price": 0},
-  {"barcode": "7418", "upc": "8991115011109", "name": "Big Babol Blubery 22.5gr", "stock": 4, "price": 0},
-  {"barcode": "4036", "upc": "9555030107614", "name": "permen himalaya lemon flavor 15", "stock": 9, "price": 0},
-  {"barcode": "12625", "upc": "9555030108581", "name": "permen himalaya ginger lemon 15", "stock": 2, "price": 0},
-  {"barcode": "834", "upc": "8998685011003", "name": "Hexos Mint 12.5g", "stock": 6, "price": 0},
-  {"barcode": "835", "upc": "8998685012000", "name": "Hexos Lemon Mint 12.5g", "stock": 7, "price": 0},
-  {"barcode": "840", "upc": "8998685021002", "name": "Nano Nano Kulit Jeruk", "stock": 18, "price": 0},
-  {"barcode": "841", "upc": "8998685023006", "name": "Nano Nano Belimbing", "stock": 12, "price": 0},
-  {"barcode": "8135", "upc": "8998685229002", "name": "Nano-Nano Jambu 12.5gr", "stock": 8, "price": 0},
-  {"barcode": "8136", "upc": "8998685228005", "name": "Nano-Nano Anggur 12.5gr", "stock": 7, "price": 0},
-  {"barcode": "4286", "upc": "0000955063020", "name": "Strepsil Cool 2,6gr", "stock": 4, "price": 0},
-  {"barcode": "4285", "upc": "0000955062962", "name": "Strepsil Original 2,6gr", "stock": 3, "price": 0},
-  {"barcode": "9598", "upc": "8993560155445", "name": "Strepsil menthol & vanila F 2.6", "stock": 3, "price": 0},
-  {"barcode": "10184", "upc": "0000508195154", "name": "Fisherman's friend original 25g", "stock": 6, "price": 0},
-  {"barcode": "10181", "upc": "0000508540046", "name": "Fisherman's friend original 25g", "stock": 5, "price": 0},
-  {"barcode": "2580", "upc": "8992858687101", "name": "Woods permen original 15gr", "stock": 7, "price": 0},
-  // Data Rak Tissue (OKM)
-  {"barcode": "10828", "upc": "8992759174090", "name": "Nice living 2000 helai 1000gr", "stock": 8, "price": 0},
-  {"barcode": "13595", "upc": "0", "name": "nice towel serbaguna 500s", "stock": 3, "price": 0},
-  {"barcode": "740", "upc": "8992759218046", "name": "Jolly kuliner roll 10roll 2play", "stock": 3, "price": 0},
-  {"barcode": "1550", "upc": "0", "name": "Tissue Jolly Napkin 240's", "stock": 5, "price": 0},
-  {"barcode": "7045", "upc": "4970129750031", "name": "Bulpen Snowman V-6 Blue", "stock": 1, "price": 0},
-  {"barcode": "12487", "upc": "8993163410019", "name": "Sierra facial tissue 600's", "stock": 3, "price": 0},
-  {"barcode": "9574", "upc": "8992931001848", "name": "Tessa towel roll 100's", "stock": 6, "price": 0},
-  {"barcode": "6666", "upc": "8992931001220", "name": "Tessa Nature 150's THNS 02", "stock": 4, "price": 0},
-  {"barcode": "2097", "upc": "8992931005020", "name": "Tessa 260's TP-02", "stock": 6, "price": 0},
-  {"barcode": "7344", "upc": "8992931005228", "name": "Tessa Interfold F Tissue TP 22", "stock": 3, "price": 0},
-  {"barcode": "9875", "upc": "8992931005105", "name": "Tessa tp-10 150's", "stock": 8, "price": 0},
-  {"barcode": "4107", "upc": "8992931005235", "name": "tissue tessa 200shets buy 1 Get", "stock": 1, "price": 0},
-  {"barcode": "225", "upc": "8993053111149", "name": "Paseo facial box 200's", "stock": 3, "price": 0},
-  {"barcode": "12527", "upc": "0", "name": "Tissue serap minyak 20's all", "stock": 5, "price": 0},
-  {"barcode": "227", "upc": "8993053121018", "name": "Paseo elegant 250's/510play", "stock": 4, "price": 0},
-  {"barcode": "229", "upc": "8993053121407", "name": "Paseo smart pack 500+40\"s", "stock": 6, "price": 0},
-  {"barcode": "4661", "upc": "8993053121360", "name": "Paseo Baby Pure Soft 130's", "stock": 5, "price": 0},
-  {"barcode": "232", "upc": "8993053121391", "name": "Paseo ultra soft 100's", "stock": 15, "price": 0},
-  {"barcode": "233", "upc": "8993053131239", "name": "Paseo pure soft 50's", "stock": 11, "price": 0},
-  {"barcode": "230", "upc": "8993053131246", "name": "Paseo ultra soft 40's", "stock": 15, "price": 0},
-  {"barcode": "8345", "upc": "8993053131017", "name": "Paseo Elegant 108 ply 50's", "stock": 2, "price": 0},
-  {"barcode": "12563", "upc": "8993053141771", "name": "Paseo elegant hanky parfume 24p", "stock": 11, "price": 0},
-  {"barcode": "243", "upc": "8992759124354", "name": "Nice 180's/360 helai", "stock": 7, "price": 0},
-  {"barcode": "13594", "upc": "0", "name": "nice towel serbaguna 120s", "stock": 3, "price": 0},
-  {"barcode": "2107", "upc": "8992931025011", "name": "Multi 260's", "stock": 4, "price": 0},
-  {"barcode": "12436", "upc": "8992931002197", "name": "Tissue multi 160'S-2P MP11", "stock": 3, "price": 0},
-  {"barcode": "12949", "upc": "8994462940054", "name": "Neabeauty facial 500's", "stock": 2, "price": 0},
-  {"barcode": "12875", "upc": "8991004028416", "name": "Tisu neabeauty serbaguna 200gr", "stock": 1, "price": 0},
-  {"barcode": "4418", "upc": "8993163510160", "name": "tissue sierra 250- 2 ply", "stock": 2, "price": 0},
-  {"barcode": "937", "upc": "8993163502059", "name": "Montiss soft pack 200's", "stock": 7, "price": 0},
-  {"barcode": "939", "upc": "8993163502066", "name": "Montiss soft pack 150's", "stock": 3, "price": 0},
-  {"barcode": "941", "upc": "8993163502134", "name": "Montiss travelpack 50's", "stock": 8, "price": 0},
-  {"barcode": "938", "upc": "8993163502080", "name": "Montiss soft pack 120's", "stock": 3, "price": 0},
-  {"barcode": "940", "upc": "8993163502103", "name": "Montiss compact interfold 200's", "stock": 3, "price": 0},
-  {"barcode": "9159", "upc": "8992931001589", "name": "Tissue Tessa Nature 60's Coklat", "stock": 4, "price": 0},
-  {"barcode": "2113", "upc": "8992931005099", "name": "Tessa looney 50's", "stock": 4, "price": 0},
-  {"barcode": "12810", "upc": "8993163505036", "name": "Travel favour gentle&soft 50's", "stock": 5, "price": 0},
-  {"barcode": "1550", "upc": "0", "name": "Tissue Jolly Napkin 240's", "stock": 3, "price": 0},
-  {"barcode": "7396", "upc": "8992759170580", "name": "Tissue Jolly 250's", "stock": 9, "price": 0},
-  // Data Rak Snack (Katarina Part 2)
-  {"barcode": "8515", "upc": "0089686611236", "name": "Qtela Tempe orek 100gr", "stock": 5, "price": 0},
-  {"barcode": "12519", "upc": "8993039243482", "name": "Regal dark marie choco 120gr", "stock": 7, "price": 0},
-  {"barcode": "7141", "upc": "8997004301429", "name": "Oishi Sponge Coklat 110gr", "stock": 1, "price": 0},
-  {"barcode": "1969", "upc": "8998866613262", "name": "Sukses isi 2 SOTO MIE 111g", "stock": 2, "price": 0},
-  {"barcode": "7145", "upc": "8997004301245", "name": "Oishi Pillows Ubi 110gr", "stock": 8, "price": 0},
-  {"barcode": "8465", "upc": "8998694121403", "name": "Bringz Lumier cokelat 100gr", "stock": 4, "price": 0},
-  {"barcode": "813", "upc": "8998694120987", "name": "Choco mania Cheese 90g", "stock": 10, "price": 0},
-  {"barcode": "812", "upc": "8998694120345", "name": "Choco Mania Rich Chocolate 90g", "stock": 3, "price": 0},
-  {"barcode": "6154", "upc": "8996001355978", "name": "Beng-beng Share It 9.5gr", "stock": 3, "price": 0},
-  {"barcode": "4271", "upc": "8993175538596", "name": "Nabati Bites Richoco 112/100gr", "stock": 6, "price": 0},
-  {"barcode": "1480", "upc": "7622300761349", "name": "Oreo Mini Original 61,3gr", "stock": 5, "price": 0},
-  {"barcode": "3793", "upc": "8995108509550", "name": "Kuaci rebo original 70gr", "stock": 3, "price": 0},
-  {"barcode": "3792", "upc": "8995108509567", "name": "Kuaci rebo Milk Flavor 70gr", "stock": 1, "price": 0},
-  {"barcode": "5347", "upc": "8995077606113", "name": "Fuzo Kuaci Susu 140gr", "stock": 5, "price": 0},
-  {"barcode": "5355", "upc": "8995108500052", "name": "Kuaci rebo Milk Flavor 150gr", "stock": 5, "price": 0},
-  {"barcode": "5356", "upc": "8995108500038", "name": "Kuaci rebo Original 150gr", "stock": 4, "price": 0},
-  {"barcode": "13458", "upc": "#N/A", "name": "Kusuka kari ayam 20gr", "stock": 6, "price": 0},
-  {"barcode": "11275", "upc": "8997233930209", "name": "Kusuka jagung amerika 20gr", "stock": 4, "price": 0},
-  {"barcode": "2528", "upc": "8997233930582", "name": "Kusuka Ubi Mix Honey 40g", "stock": 3, "price": 0},
-  {"barcode": "2888", "upc": "8997233930803", "name": "Kusuka Ubi Madu 42g", "stock": 7, "price": 0},
-  {"barcode": "2889", "upc": "8997233930858", "name": "Kusuka Ubi BBQ 42g", "stock": 8, "price": 0},
-  {"barcode": "2898", "upc": "0653314503561", "name": "Kusuka Toping Balado 60g", "stock": 1, "price": 0},
-  {"barcode": "2459", "upc": "0653314505510", "name": "Kusuka Super Pedas 50g", "stock": 6, "price": 0},
-  {"barcode": "1070", "upc": "8997233930322", "name": "Kusuka Ghost Pepper 50g", "stock": 7, "price": 0},
-  {"barcode": "13080", "upc": "#N/A", "name": "Kusuka ubi keju balado 42gr", "stock": 5, "price": 0},
-  {"barcode": "2359", "upc": "0653314504513", "name": "Kusuka rumput laut 60gr", "stock": 6, "price": 0},
-  {"barcode": "2358", "upc": "0053314502234", "name": "Kusuka keju bakar 60gr", "stock": 6, "price": 0},
-  {"barcode": "2450", "upc": "0653314502120", "name": "Kusuka original 180gr", "stock": 3, "price": 0},
-  {"barcode": "2452", "upc": "0653314502540", "name": "Kusuka Balado spicy180gr", "stock": 4, "price": 0},
-  {"barcode": "2451", "upc": "0053314502111", "name": "Kusuka Barbeque 180gr", "stock": 2, "price": 0},
-  {"barcode": "2453", "upc": "0653314506012", "name": "Kusuka Rumput Laut 180gr", "stock": 9, "price": 0},
-  {"barcode": "2401", "upc": "0653314502144", "name": "Kusuka Keju Bakar 180gr", "stock": 3, "price": 0},
-  {"barcode": "2364", "upc": "0653314502137", "name": "Kusuka cheese burger 180gr", "stock": 5, "price": 0},
-  // Data Stok Harian OK 2 (M.I.C.H.A.E.L) Baru
-  {"barcode": "10214", "upc": "8998866619264", "name": "Soklin antiseptik bag 1.4kg", "stock": 1, "price": 0},
-  {"barcode": "285", "upc": "8999995558079", "name": "Rinso anti noda rose fresh 40g", "stock": 6, "price": 0},
-  {"barcode": "284", "upc": "0", "name": "Rinso anti noda classic 40g", "stock": 2, "price": 0},
-  {"barcode": "6826", "upc": "8998866618281", "name": "Daia Clean&Fresh Hijab 53gr", "stock": 6, "price": 0},
-  {"barcode": "1856", "upc": "8998866607360", "name": "daia putih sachet 55gr", "stock": 6, "price": 0},
-  {"barcode": "1857", "upc": "8998866608701", "name": "daia soft pink sachet 53gr", "stock": 4, "price": 0},
-  {"barcode": "1858", "upc": "8998866610230", "name": "daia violet sachet 55gr", "stock": 5, "price": 0},
-  {"barcode": "1854", "upc": "8998866602211", "name": "daia bunga sachet 53GR", "stock": 4, "price": 0},
-  {"barcode": "1855", "upc": "8998866604956", "name": "daia lemon sachet 53GR", "stock": 4, "price": 0},
-  {"barcode": "2747", "upc": "8998866623803", "name": "soklin lantai citrus garde780ml", "stock": 3, "price": 0},
-  {"barcode": "1912", "upc": "8998866679602", "name": "soklin lantai fruity apel 780ml", "stock": 1, "price": 0},
-  {"barcode": "1913", "upc": "8998866679664", "name": "soklin lantai Citruslemon 780ml", "stock": 3, "price": 0},
-  {"barcode": "1917", "upc": "8998866600569", "name": "soklin lantai hijau 310ml", "stock": 3, "price": 0},
-  {"barcode": "1919", "upc": "8998866600538", "name": "soklin lantai Rose Bouquet345ml", "stock": 2, "price": 0},
-  {"barcode": "93", "upc": "8886012381199", "name": "Dahlia serap bau rak sepatD-119", "stock": 1, "price": 0},
-  {"barcode": "2326", "upc": "8992745325420", "name": "Stella lemon fresh 160/225ml", "stock": 2, "price": 0},
-  {"barcode": "2325", "upc": "8992745610533", "name": "Stella japanese sakura 225ml", "stock": 1, "price": 0},
-  {"barcode": "2320", "upc": "8992745320142", "name": "Stella apple fiesta 160/225ml", "stock": 4, "price": 0},
-  {"barcode": "2321", "upc": "8992745560449", "name": "Stella caffe latte 160/225ml", "stock": 4, "price": 0},
-  {"barcode": "70", "upc": "8886012826263", "name": "Freshgo Lavender 225ml", "stock": 2, "price": 0},
-  {"barcode": "2314", "upc": "8992745320326", "name": "Stella orange twist 200ml", "stock": 6, "price": 0},
-  {"barcode": "3404", "upc": "8992745320302", "name": "stella spray lemon fresh 200ml", "stock": 2, "price": 0},
-  {"barcode": "2318", "upc": "8992745610526", "name": "Stella Japanese Sakura 350+50ml", "stock": 3, "price": 0},
-  {"barcode": "9133", "upc": "8992745610779", "name": "Stella parfum Caffe latte 350", "stock": 3, "price": 0},
-  {"barcode": "2315", "upc": "8992745320241", "name": "Stella orange twist 400ml", "stock": 3, "price": 0},
-  {"barcode": "2332", "upc": "8992745000297", "name": "Stella matic box set green", "stock": 3, "price": 0},
-  {"barcode": "8167", "upc": "8992745325406", "name": "Stella Matic Alat Blister Set", "stock": 1, "price": 0},
-  // Data Rak Sirup dan Alumunium Foil (H.A.N.Z.O) Baru
-  {"barcode": "1506", "upc": "899888110213", "name": "Marjan Boudoin Melon 460ml", "stock": 1, "price": 0},
-  {"barcode": "1516", "upc": "8998881170910", "name": "Marjan Squash Orange 450ml", "stock": 2, "price": 0},
-  {"barcode": "6252", "upc": "0711844150003", "name": "ABC Aquash D Jeruk Floridina", "stock": 1, "price": 0},
-  {"barcode": "7414", "upc": "8992696426559", "name": "Nastle Cap Nona 365gr", "stock": 1, "price": 0},
-  {"barcode": "6654", "upc": "8992753720606", "name": "Omela kental Manis 490gr", "stock": 6, "price": 0},
-  {"barcode": "672", "upc": "8992753631209", "name": "Susu Omela Kental Manis 370gr", "stock": 5, "price": 0},
-  {"barcode": "678", "upc": "8992753102204", "name": "frisian flag kaleng 370g coklat", "stock": 6, "price": 0},
-  {"barcode": "7192", "upc": "8992696426528", "name": "Carnation kental manis 488gr", "stock": 1, "price": 0},
-  {"barcode": "11966", "upc": "8.9927E+12", "name": "Carnation kental manis 38gr", "stock": 1, "price": 0},
-  {"barcode": "4250", "upc": "8993007001694", "name": "indomilk susu kental manis 37gr", "stock": 8, "price": 0},
-  {"barcode": "13572", "upc": "8.99301E+12", "name": "Indomilk matcha 260gr", "stock": 2, "price": 0},
-  {"barcode": "4249", "upc": "8993007003902", "name": "Susu indomilk 545ml", "stock": 4, "price": 0},
-  {"barcode": "673", "upc": "8992753004010", "name": "Susu Frisian Flag KM 545gr", "stock": 2, "price": 0},
-  {"barcode": "10481", "upc": "8.99275E+12", "name": "Susu Frisian Flag KM cok 280GR", "stock": 6, "price": 0},
-  {"barcode": "677", "upc": "8992753004034", "name": "frisian flag refil 545gr coklat", "stock": 2, "price": 0},
-  {"barcode": "3124", "upc": "4902430538602", "name": "Entrasol oatmeal 600 gr", "stock": 4, "price": 0},
-  {"barcode": "2914", "upc": "8.9928E+12", "name": "Entrasol multi oatmeal 180gr", "stock": 12, "price": 0},
-  {"barcode": "4834", "upc": "9556174802236", "name": "Quaker Instant Oatmeal 200gr", "stock": 4, "price": 0},
-  {"barcode": "13584", "upc": "8.99304E+12", "name": "Edna bread improver 500gr", "stock": 4, "price": 0},
-  {"barcode": "12339", "upc": "8.99533E+12", "name": "Terigu Gerbang 1 kg", "stock": 3, "price": 0},
-  {"barcode": "1500", "upc": "8993296210005", "name": "Terigu Segitiga Biru 1 Kg", "stock": 6, "price": 0},
-  {"barcode": "7008", "upc": "8993296205001", "name": "Tepung segitiga Biru 500gr", "stock": 1, "price": 0},
-  {"barcode": "6886", "upc": "8995333032113", "name": "tepung terigu gatot kaca 1 kg", "stock": 4, "price": 0},
-  {"barcode": "9197", "upc": "8995333060772", "name": "tepung terigu Gatot Kaca 500gr", "stock": 5, "price": 0},
-  {"barcode": "6164", "upc": "8995333060703", "name": "Tepung terigu Kompas 1kg", "stock": 4, "price": 0},
-  {"barcode": "6165", "upc": "8995333000822", "name": "Tepung terigu Kompas 500gr", "stock": 6, "price": 0},
-  {"barcode": "6241", "upc": "8997226223653", "name": "Tepung terigu Kompas 250 gr", "stock": 4, "price": 0},
-  {"barcode": "1459", "upc": "8993093664605", "name": "Tepung Tapioka Rose Brand 500gr", "stock": 2, "price": 0},
-  {"barcode": "1458", "upc": "8993093115008", "name": "Tepung Beras RoseBrand 500gr", "stock": 2, "price": 0},
-  {"barcode": "9307", "upc": "8993093666326", "name": "Gula Halus rose brand 500 g", "stock": 3, "price": 0},
-  {"barcode": "1457", "upc": "8997013450231", "name": "Gula Pasir Kristal Pyramid 500g", "stock": 8, "price": 0},
-  {"barcode": "13217", "upc": "8.99421E+12", "name": "Gula manis kita 1kg", "stock": 4, "price": 0},
-  {"barcode": "2729", "upc": "#N/A", "name": "Kertas Nasi", "stock": 6, "price": 0},
-  {"barcode": "5930", "upc": "0", "name": "Kertas Nasi bulat", "stock": 2, "price": 0},
-  {"barcode": "10548", "upc": "#N/A", "name": "Plastik rajawali kecil", "stock": 20, "price": 0},
-  {"barcode": "10550", "upc": "#N/A", "name": "Plastik garasi besar", "stock": 4, "price": 0},
-  {"barcode": "10549", "upc": "#N/A", "name": "Plastik rajawali sedang", "stock": 25, "price": 0},
-  {"barcode": "2795", "upc": "#N/A", "name": "Sumbu kompor 400 gr", "stock": 1, "price": 0},
-  {"barcode": "13375", "upc": "#N/A", "name": "plastik alas makan", "stock": 2, "price": 0},
-  {"barcode": "2808", "upc": "#N/A", "name": "Plastik sampah 80 x 100", "stock": 4, "price": 0},
-  {"barcode": "13381", "upc": "8.9951E+12", "name": "garpu plastik ultah", "stock": 2, "price": 0},
-  {"barcode": "13377", "upc": "#N/A", "name": "garpu buah", "stock": 3, "price": 0},
-  {"barcode": "13378", "upc": "#N/A", "name": "sendok jelly plastik", "stock": 3, "price": 0},
-  {"barcode": "13389", "upc": "#N/A", "name": "SYB powder mask lavender 10gr", "stock": 1, "price": 0},
-  {"barcode": "13376", "upc": "#N/A", "name": "karet gelang pak", "stock": 6, "price": 0},
-  {"barcode": "2230", "upc": "8992749770370", "name": "Klinpak aluminium foil jumbo", "stock": 4, "price": 0},
-  {"barcode": "13166", "upc": "#N/A", "name": "Klinpak bliss wrap 30cmx30mm", "stock": 1, "price": 0},
-  {"barcode": "2234", "upc": "8992749770325", "name": "Barang Barcode 2234", "stock": 1, "price": 0},
-  {"barcode": "2229", "upc": "8992749770356", "name": "Klinpak aluminium foil", "stock": 2, "price": 0},
-  // Data Rak Rokok (Louisa) Baru
-  {"barcode": "11075", "upc": "8998989300421", "name": "Roko filter surya merah 16", "stock": 6, "price": 0},
-  {"barcode": "529", "upc": "8998989110167", "name": "Rokok SURYA 16 coklat", "stock": 15, "price": 0},
-  {"barcode": "528", "upc": "8998989110129", "name": "Rokok SURYA 12", "stock": 126, "price": 0},
-  {"barcode": "5333", "upc": "8998989500166", "name": "ROKOK Gudang garam merah 16", "stock": 4, "price": 0},
-  {"barcode": "5332", "upc": "8998989500128", "name": "ROKOK Gudang garam merah 12", "stock": 5, "price": 0},
-  {"barcode": "13302", "upc": "#N/A", "name": "Roko xpert premium 20", "stock": 9, "price": 0},
-  {"barcode": "531", "upc": "8998989300391", "name": "ROKOK SURYA PRO MILD 16's", "stock": 10, "price": 0},
-  {"barcode": "530", "upc": "8998989121163", "name": "ROKOK SURYA PRO MERAH 16's", "stock": 15, "price": 0},
-  {"barcode": "527", "upc": "8998989100120", "name": "Rokok GG FILTER 12's", "stock": 3, "price": 0},
-  {"barcode": "540", "upc": "8999909001909", "name": "ROKOK 234 Magnum Hitam 12", "stock": 11, "price": 0},
-  {"barcode": "10576", "upc": "899723733971", "name": "Roko Twizz royal crush 16", "stock": 2, "price": 0},
-  {"barcode": "12246", "upc": "899723735616", "name": "Roko Twizz prime 16 / TWP16", "stock": 13, "price": 0},
-  {"barcode": "4070", "upc": "8999909000988", "name": "ROKOK sampoerna 12 kretek LE", "stock": 4, "price": 0},
-  {"barcode": "598", "upc": "8999909085114", "name": "ROKOK Sampoerna Kretek 12", "stock": 9, "price": 0},
-  {"barcode": "5100", "upc": "8999909028234", "name": "ROKOK Dji sam soe 234 12", "stock": 18, "price": 0},
-  {"barcode": "541", "upc": "8999909000629", "name": "ROKOK Dji Sam Soe 12", "stock": 10, "price": 0},
-  {"barcode": "542", "upc": "8999909010567", "name": "ROKOK Dji Sam Soe 16", "stock": 6, "price": 0},
-  {"barcode": "11366", "upc": "8990899890153", "name": "Roko 153 Kretek", "stock": 14, "price": 0},
-  {"barcode": "2953", "upc": "#N/A", "name": "Roko 153 Kretek / SLT20", "stock": 7, "price": 0},
-  {"barcode": "539", "upc": "8999909028999", "name": "ROKOK 234 Super Premium 12", "stock": 262, "price": 0},
-  {"barcode": "590", "upc": "8999909010475", "name": "ROKOK Dji Sam Soe 16 Super", "stock": 9, "price": 0},
-  {"barcode": "4413", "upc": "0", "name": "Petek M2000 m-08", "stock": 21, "price": 0},
-  {"barcode": "7428", "upc": "0", "name": "petek G2000premium light taurus", "stock": 14, "price": 0},
-  {"barcode": "7649", "upc": "0", "name": "Petek G2000 Lighter Liv/newyork", "stock": 25, "price": 0},
-  {"barcode": "6396", "upc": "0", "name": "Petek Hugo h428/liverpool", "stock": 43, "price": 0},
-  {"barcode": "5942", "upc": "9555143600019", "name": "Petek cricket", "stock": 34, "price": 0},
-  {"barcode": "7937", "upc": "8991663000723", "name": "Petek gas 311 ws osaka", "stock": 3, "price": 0},
-  {"barcode": "5457", "upc": "0", "name": "petek G2000 Taurus/Nagaya", "stock": 75, "price": 0},
-  {"barcode": "1630", "upc": "8991666000256", "name": "Petek zurich ZR-08", "stock": 1, "price": 0},
-  // Data Rak Kosmetik (Puput) Baru
-  {"barcode": "3459", "upc": "8809665287342", "name": "Glad2glow facial wash 80gr", "stock": 4, "price": 0},
-  {"barcode": "12843", "upc": "4897144700745", "name": "Glad2glow deep pore clean 70ml", "stock": 4, "price": 0},
-  {"barcode": "9996", "upc": "8997226225121", "name": "Herborist facescrub rasberr 60g", "stock": 1, "price": 0},
-  {"barcode": "11729", "upc": "8992771010345", "name": "Pigeon Teens Facial Foam Acne", "stock": 2, "price": 0},
-  {"barcode": "11781", "upc": "8992821100293", "name": "Acnes foaming wash 100ml", "stock": 1, "price": 0},
-  {"barcode": "11785", "upc": "8992821102389", "name": "Acnes fw deep pore cleanser 50g", "stock": 4, "price": 0},
-  {"barcode": "11784", "upc": "8992821102341", "name": "Acnes oil control 50gr", "stock": 5, "price": 0},
-  {"barcode": "11783", "upc": "8992821102365", "name": "Acnes fc complete white 50gr", "stock": 4, "price": 0},
-  {"barcode": "11782", "upc": "8992821100392", "name": "Acnes creamy wash 50gr", "stock": 1, "price": 0},
-  {"barcode": "6935", "upc": "8993137701419", "name": "Emina Bright Stuff Face Wash 50", "stock": 2, "price": 0},
-  {"barcode": "8573", "upc": "8993137692762", "name": "Emina Sun SPF35 PA+++ 60ml", "stock": 3, "price": 0},
-  {"barcode": "13581", "upc": "#N/A", "name": "Skintific ceramide cleanser 120", "stock": 2, "price": 0},
-  {"barcode": "2907", "upc": "8994460550040", "name": "FT Real oat gel 100", "stock": 1, "price": 0},
-  {"barcode": "9224", "upc": "8993005102034", "name": "JF TSS Anti Acne FF 70gr", "stock": 3, "price": 0},
-  {"barcode": "10166", "upc": "8993005102058", "name": "JF acne spot care ff 70gr", "stock": 6, "price": 0},
-  {"barcode": "12515", "upc": "0792649106730", "name": "The originote low cica fw 150ml", "stock": 3, "price": 0},
-  {"barcode": "9523", "upc": "8992946514296", "name": "Shinzui F Wash Lightening 80ml", "stock": 1, "price": 0},
-  {"barcode": "3831", "upc": "8992304047152", "name": "GAR sakura glow foam 100ml", "stock": 2, "price": 0},
-  {"barcode": "3827", "upc": "8991380700029", "name": "GAR Foam LC Whitespeed 100ml", "stock": 5, "price": 0},
-  {"barcode": "3829", "upc": "8991380700609", "name": "GAR Scrub LC Whitespeed 100ml", "stock": 5, "price": 0},
-  {"barcode": "3828", "upc": "8991380700036", "name": "GAR FOAM LC Whitespeed 50ml", "stock": 12, "price": 0},
-  {"barcode": "3830", "upc": "8991380700593", "name": "GAR SCRUB LC Whitespeed 50ml", "stock": 6, "price": 0},
-  {"barcode": "11955", "upc": "8994993026791", "name": "Gar BC serum cleanser 100 ML", "stock": 1, "price": 0},
-  {"barcode": "6685", "upc": "8994993018222", "name": "Garnier bright anti acne 100ml", "stock": 2, "price": 0},
-  {"barcode": "5840", "upc": "8999995559441", "name": "Pons AM Fcial trtmentClean 100m", "stock": 4, "price": 0},
-  {"barcode": "2936", "upc": "8999999609559", "name": "Pond's hydra miracle 90gr", "stock": 3, "price": 0},
-  {"barcode": "558", "upc": "8999999053048", "name": "Ponsd's Pure bright FF 100gr", "stock": 5, "price": 0},
-  {"barcode": "559", "upc": "899999053031", "name": "Pond's bright miracle FF 100gr", "stock": 3, "price": 0},
-  {"barcode": "2935", "upc": "8999999609566", "name": "Pond's bright miracle biome 90g", "stock": 1, "price": 0},
-  {"barcode": "550", "upc": "899999052959", "name": "Ponsd's White Beauty FF 50G", "stock": 3, "price": 0},
-  {"barcode": "549", "upc": "899999052973", "name": "Ponsd's Pure Bright FF 50G", "stock": 3, "price": 0},
-  {"barcode": "12966", "upc": "4897148990036", "name": "Next prime men deep clean FW100", "stock": 8, "price": 0},
-  {"barcode": "3846", "upc": "8992304039614", "name": "GAR Men AF Wasabi Foam 100ml", "stock": 3, "price": 0},
-  {"barcode": "3844", "upc": "8992304015298", "name": "GAR Men AF Scrub in Foam 100ml", "stock": 1, "price": 0},
-  {"barcode": "3850", "upc": "8992304009204", "name": "GAR Men TLC Icy Scrub 100ml", "stock": 3, "price": 0},
-  {"barcode": "3848", "upc": "8992304009167", "name": "GAR Men TLC Cooling Foam 100ml", "stock": 3, "price": 0},
-  {"barcode": "3851", "upc": "8992304009181", "name": "GAR Men TLC Icy Scrub 50ml", "stock": 2, "price": 0},
-  {"barcode": "3837", "upc": "8994993001378", "name": "GAR Men 3 in 1 Charcoal 50ml", "stock": 7, "price": 0},
-  {"barcode": "1328", "upc": "8992727005135", "name": "Biore men's white energy 100gr", "stock": 2, "price": 0},
-  {"barcode": "1325", "upc": "8992727005128", "name": "Biore men's white energy 40g", "stock": 2, "price": 0},
-  {"barcode": "1324", "upc": "8992727005104", "name": "Biore men's cool oil clear 40g", "stock": 6, "price": 0},
-  {"barcode": "1326", "upc": "8992727005142", "name": "Biore men's acne action 40g", "stock": 3, "price": 0},
-  {"barcode": "2217", "upc": "899777002602", "name": "Nivea Men cooling foam 50ml", "stock": 3, "price": 0},
-  {"barcode": "2918", "upc": "8991111000121", "name": "C&C vit c face wash 100ml", "stock": 4, "price": 0},
-  {"barcode": "4572", "upc": "8991111111971", "name": "C&C Foaming face wash 100ml", "stock": 4, "price": 0},
-  {"barcode": "2919", "upc": "8991111000114", "name": "C&C vit c face wash 50ml", "stock": 2, "price": 0},
-  {"barcode": "4573", "upc": "8991111111964", "name": "C&C Foaming face wash 50ml", "stock": 2, "price": 0},
-  {"barcode": "4576", "upc": "8991111112084", "name": "C&C daily pore cleanser 50g", "stock": 4, "price": 0},
-  {"barcode": "628", "upc": "8993137695169", "name": "Wardah Aloe Facial Wash 60ml", "stock": 4, "price": 0},
-  {"barcode": "4448", "upc": "8993137695244", "name": "WA ND Aloe Facial Wash 100ml", "stock": 2, "price": 0},
-  {"barcode": "4040", "upc": "8993137707732", "name": "WA lightening niac foam 50ml", "stock": 6, "price": 0},
-  {"barcode": "4039", "upc": "8993137697019", "name": "WA lightening GFW 100ml", "stock": 2, "price": 0},
-  {"barcode": "625", "upc": "8999999525927", "name": "Citra FF pearly white 100gr", "stock": 1, "price": 0},
-  {"barcode": "570", "upc": "899999055776", "name": "Fair & lovely FF 100gr", "stock": 4, "price": 0},
-  {"barcode": "568", "upc": "899999055769", "name": "Fair & lovely FF multi 50gr", "stock": 4, "price": 0},
-  {"barcode": "7579", "upc": "8999999566647", "name": "Fair&Lovely Bright C Glow FF 50", "stock": 4, "price": 0},
-  {"barcode": "1234", "upc": "8992727004237", "name": "Biore facial bright& clear 40gr", "stock": 3, "price": 0},
-  {"barcode": "10882", "upc": "8999068886606", "name": "Marina ff bright boost 100ml", "stock": 1, "price": 0},
-  {"barcode": "2218", "upc": "899777002954", "name": "Nivea Men white pore scrub 100m", "stock": 2, "price": 0},
-  {"barcode": "2209", "upc": "899777888381", "name": "Nivea Men acne oil clear 100ml", "stock": 2, "price": 0},
-  {"barcode": "2214", "upc": "899777788367", "name": "Nivea Men extra white dark 100m", "stock": 1, "price": 0},
-  {"barcode": "5233", "upc": "8992222054539", "name": "Gatsby CFW Oil Cntrl 100 gr", "stock": 2, "price": 0},
-  {"barcode": "100050", "upc": "8997016223832", "name": "Moris OC&AC face&bread wash 100", "stock": 4, "price": 0},
-  {"barcode": "6201", "upc": "8999999034719", "name": "Pons Men Acne oil control 100gr", "stock": 1, "price": 0},
-  {"barcode": "7186", "upc": "8999999527365", "name": "Pons Men Light oil Clear 100gr", "stock": 2, "price": 0},
-  {"barcode": "5731", "upc": "899999034733", "name": "pons Men bright dark scru 100gr", "stock": 1, "price": 0},
-  {"barcode": "11631", "upc": "8993137710428", "name": "Kahf oil and acne facewash 100", "stock": 3, "price": 0},
-  {"barcode": "11699", "upc": "8993137710411", "name": "Kahf skin energiz facewash 100", "stock": 1, "price": 0},
-  {"barcode": "11630", "upc": "8993137723756", "name": "Kahf triple action facewash 100", "stock": 3, "price": 0}
+  {"barcode": "2436", "upc": "88860008101336", "name": "Air Mineral Aqua botol 330ml", "stock": 51, "price": 0}
 ];
 
 const STORAGE_KEY='diho_barang';
@@ -548,9 +207,11 @@ try {
    barang.push(...saved.filter(p=>!known.has(key(p))));
  } else barang=DATA_AWAL.map(x=>({...x}));
 } catch(e) { barang=DATA_AWAL.map(x=>({...x})); }
+
 const $=id=>document.getElementById(id);
-function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(barang))}catch(e){alert('Penyimpanan perangkat penuh atau diblokir. Ekspor data secara berkala.')} }
+function save(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(barang))}catch(e){alert('Penyimpanan perangkat penuh atau diblokir.')}}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
 function render(){
  const q=$('search').value.trim().toLowerCase();
  const filtered=barang.filter(p=>[p.name,p.barcode,p.upc].some(v=>String(v??'').toLowerCase().includes(q)));
@@ -560,42 +221,88 @@ function render(){
  $('items').innerHTML=filtered.map((p)=>`<tr><td><div class="product-name">${esc(p.name)}</div></td><td>${esc(p.barcode||'—')}</td><td>${esc(p.upc||'—')}</td><td><b>${Number(p.stock)||0}</b></td><td><div class="row"><button class="secondary" data-act="minus" data-code="${esc(p.barcode)}">−1</button><button data-act="plus" data-code="${esc(p.barcode)}">+1</button></div></td></tr>`).join('');
  $('empty').classList.toggle('hidden',filtered.length!==0);
 }
-function findItem(code){let c=String(code||'').trim();return barang.find(p=>String(p.barcode||'').trim()===c||String(p.upc||'').trim()===c)}
-function showMatch(code){
- const p=findItem(code);const box=$('match');box.classList.remove('hidden');
- if(!p){box.textContent='Kode '+code+' belum ada dalam daftar. Coba cari nama barang atau periksa kode pada label.';return}
- box.innerHTML='<b>'+esc(p.name)+'</b><br>Barcode: '+esc(p.barcode||'—')+' · UPC: '+esc(p.upc||'—')+'<br>Stok tersedia: <b>'+(Number(p.stock)||0)+'</b>';
- $('search').value=String(code);render();
-}
+
+// Pencarian Manual / Tombol Cari
+$('searchBtn').addEventListener('click',()=>{
+ render();
+ const q=$('search').value.trim();
+ if(q){
+  const found=barang.find(p=>[p.name,p.barcode,p.upc].some(v=>String(v??'').toLowerCase().includes(q.toLowerCase())));
+  const box=$('match');
+  box.classList.remove('hidden');
+  if(found){
+   box.innerHTML='<b>Ditemukan:</b> '+esc(found.name)+'<br>Barcode: '+esc(found.barcode||'—')+' · Stok: <b>'+found.stock+'</b>';
+  } else {
+   box.textContent='Barang "'+q+'" tidak ditemukan.';
+  }
+ }
+});
+
 $('search').addEventListener('input',()=>{render();$('match').classList.add('hidden')});
+
+// Penambahan Barang Manual
+$('formAdd').addEventListener('submit',e=>{
+ e.preventDefault();
+ const name=$('addName').value.trim();
+ const barcode=$('addBarcode').value.trim()||('BC'+Date.now().toString().slice(-5));
+ const upc=$('addUpc').value.trim();
+ const stock=parseInt($('addStock').value)||0;
+
+ if(!name)return;
+
+ // Cek duplikat barcode
+ const exist=barang.find(p=>String(p.barcode)===barcode);
+ if(exist){
+   alert('Barcode internal sudah digunakan oleh: '+exist.name);
+   return;
+ }
+
+ barang.unshift({barcode, upc, name, stock, price:0});
+ save();
+ render();
+ $('formAdd').reset();
+ $('addStock').value='1';
+ alert('Barang "'+name+'" berhasil ditambahkan!');
+});
+
 $('items').addEventListener('click',e=>{
  const b=e.target.closest('button[data-act]');if(!b)return;
  const p=barang.find(x=>String(x.barcode)===b.dataset.code);if(!p)return;
  p.stock=Math.max(0,(Number(p.stock)||0)+(b.dataset.act==='plus'?1:-1));save();render();
 });
-$('resetBtn').addEventListener('click',()=>{if(confirm('Kembalikan daftar ke semua data bawaan? Perubahan lokal pada stok akan hilang.')){barang=DATA_AWAL.map(x=>({...x}));save();render();}});
+
+$('resetBtn').addEventListener('click',()=>{if(confirm('Kembalikan daftar ke semua data bawaan? Perubahan lokal akan hilang.')){barang=DATA_AWAL.map(x=>({...x}));save();render();}});
+
 $('exportBtn').addEventListener('click',()=>{
  const rows=[['barcode_internal','UPC','nama_barang','stok','harga'],...barang.map(p=>[p.barcode,p.upc,p.name,p.stock,p.price||0])];
  const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='DIHO_data_barang.csv';a.click();URL.revokeObjectURL(a.href);
 });
+
 let stream=null,detector=null,scanLoop=false;
 $('scanBtn').addEventListener('click',startScan);$('stopBtn').addEventListener('click',stopScan);
 async function startScan(){
  $('scanArea').classList.remove('hidden');$('scanMessage').textContent='';
- if(!('BarcodeDetector' in window)){ $('scanMessage').textContent='Browser ini belum mendukung pemindai kamera otomatis. Ketik atau tempel kode ke kotak pencarian.';return;}
+ if(!('BarcodeDetector' in window)){ $('scanMessage').textContent='Browser ini belum mendukung pemindai kamera otomatis.';return;}
  try{
   detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf']});
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
   $('video').srcObject=stream;await $('video').play();scanLoop=true;scanFrame();
- }catch(e){$('scanMessage').textContent='Kamera tidak dapat dibuka. Izinkan akses kamera dan gunakan halaman HTTPS.'}
+ }catch(e){$('scanMessage').textContent='Kamera tidak dapat dibuka. Gunakan HTTPS atau izinkan izin kamera.'}
 }
 async function scanFrame(){
  if(!scanLoop||!stream)return;
  try{const codes=await detector.detect($('video'));if(codes.length){const val=codes[0].rawValue;stopScan();showMatch(val);return;}}catch(e){}
  requestAnimationFrame(scanFrame);
 }
+function showMatch(code){
+ const p=barang.find(x=>String(x.barcode)===code||String(x.upc)===code);const box=$('match');box.classList.remove('hidden');
+ if(!p){box.textContent='Kode '+code+' belum terdaftar.';return}
+ box.innerHTML='<b>'+esc(p.name)+'</b><br>Barcode: '+esc(p.barcode||'—')+'<br>Stok tersedia: <b>'+p.stock+'</b>';
+ $('search').value=String(code);render();
+}
 function stopScan(){scanLoop=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$('video').srcObject=null;$('scanArea').classList.add('hidden')}
+
 render();
 </script>
 </body></html>
